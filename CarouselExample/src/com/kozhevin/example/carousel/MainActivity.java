@@ -14,6 +14,9 @@ import android.widget.LinearLayout;
 
 public class MainActivity extends Activity {
 
+	private static final int ITEM_COUNT = 7;
+
+
 	private final float TRANSLATION_VALUE_X = -1400f;
 	
 	
@@ -64,7 +67,7 @@ public class MainActivity extends Activity {
 
 	private List<ViewModel> createMockList() {
 		List<ViewModel> items = new ArrayList<ViewModel>();
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < ITEM_COUNT; i++) {
 			items.add(new ViewModel(i, "Item " + (i + 1), null));
 		}
 		return items;
