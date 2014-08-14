@@ -18,12 +18,13 @@ package com.kozhevin.example.carousel;
 
 import java.util.List;
 
+import com.kozhevin.example.carousel.listeners.OnLappingItemListener;
+
 import android.content.Context;
 import android.graphics.PointF;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.support.v4.view.ViewCompat;
-import android.support.v7.widget.LinearSmoothScroller;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
@@ -36,9 +37,13 @@ import android.widget.LinearLayout;
  */
 public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
+	private static final int CENTER_SCREEN_DEFAULT = 0;
+
 	private static final String TAG = "LinearLayoutManager";
 
-	private static final boolean DEBUG = false;
+	private static final boolean DEBUG = true;
+
+	private static final boolean IS_DEBUG_SCALE = true;
 
 	public static final int HORIZONTAL = LinearLayout.HORIZONTAL;
 
@@ -120,6 +125,12 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 	private SavedState mPendingSavedState = null;
 
 	private int mPositionForInsert;
+
+	private int mCenterScreen = CENTER_SCREEN_DEFAULT;
+
+	private float mMinLappingValue;
+
+	private OnLappingItemListener mOnLappingItemListener;
 
 	/**
 	 * Creates a vertical LinearLayoutManager
@@ -265,6 +276,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		mOrientation = orientation;
 		mOrientationHelper = null;
 		requestLayout();
+		mCenterScreen = CENTER_SCREEN_DEFAULT;
 	}
 
 	/**
@@ -366,14 +378,15 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
 	@Override
 	public void smoothScrollToPosition(RecyclerView recyclerView, RecyclerView.State state, int position) {
-		LinearSmoothScroller linearSmoothScroller = new LinearSmoothScroller(recyclerView.getContext()) {
+		CarouselSmoothScroller lCarouselSmoothScroller = new CarouselSmoothScroller(recyclerView.getContext()) {
 			@Override
 			public PointF computeScrollVectorForPosition(int targetPosition) {
 				return CarouselLayoutManager.this.computeScrollVectorForPosition(targetPosition);
 			}
 		};
-		linearSmoothScroller.setTargetPosition(position);
-		startSmoothScroll(linearSmoothScroller);
+		lCarouselSmoothScroller.setDxOffset(getmOffsetForSmoothController());
+		lCarouselSmoothScroller.setTargetPosition(position);
+		startSmoothScroll(lCarouselSmoothScroller);
 	}
 
 	public PointF computeScrollVectorForPosition(int targetPosition) {
@@ -532,7 +545,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		if (!layoutFromEnd) {
 			mRenderState.mCurrentPosition += mRenderState.mItemDirection;
 		}
-		fill(recycler, mRenderState, state, false);
+		fill(recycler, mRenderState, state, false, false);
 		int startOffset = mRenderState.mOffset;
 		// fill towards end
 		updateRenderStateToFillEnd(anchorItemPosition, anchorCoordinate);
@@ -540,7 +553,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		if (layoutFromEnd) {
 			mRenderState.mCurrentPosition += mRenderState.mItemDirection;
 		}
-		fill(recycler, mRenderState, state, false);
+		fill(recycler, mRenderState, state, false, false);
 		int endOffset = mRenderState.mOffset;
 		// changes may cause gaps on the UI, try to fix them.
 		if (getChildCount() > 0) {
@@ -600,7 +613,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 				mRenderState.mExtra = scrapExtraStart;
 				mRenderState.mAvailable = 0;
 				mRenderState.mCurrentPosition += mShouldReverseLayout ? 1 : -1;
-				fill(recycler, mRenderState, state, false);
+				fill(recycler, mRenderState, state, false, false);
 			}
 
 			if (scrapExtraEnd > 0) {
@@ -609,7 +622,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 				mRenderState.mExtra = scrapExtraEnd;
 				mRenderState.mAvailable = 0;
 				mRenderState.mCurrentPosition += mShouldReverseLayout ? -1 : 1;
-				fill(recycler, mRenderState, state, false);
+				fill(recycler, mRenderState, state, false, false);
 			}
 			mRenderState.mScrapList = null;
 		}
@@ -860,16 +873,44 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		mRenderState.mScrollingOffset = fastScrollSpace;
 	}
 
+	private int mOffsetForSmoothController;
+
+	private boolean mIsEnabledCalulateLappingItem;
+
+	private int mMinLappingItemIndex;
+
+
 	private int scrollBy(int dy, RecyclerView.Recycler recycler, RecyclerView.State state) {
 		if (getChildCount() == 0 || dy == 0) {
 			return 0;
 		}
 		ensureRenderState();
 		final int layoutDirection = dy > 0 ? RenderState.LAYOUT_END : RenderState.LAYOUT_START;
-		final int absDy = Math.abs(dy);
-		updateRenderState(layoutDirection, absDy, true, state);
+		int absDy = Math.abs(dy);
+		if (DEBUG) {
+			Log.w(TAG, "absDy =" + absDy);
+		}
+		mIsEnabledCalulateLappingItem = absDy <= 90;
+		if (absDy <= 1) {
+			if (DEBUG) {
+				Log.w(TAG, "scroled =" + mMinLappingItemIndex);
+			}
+			if (mOnLappingItemListener != null) {
+				mIsEnabledCalulateLappingItem = false;
+				mOnLappingItemListener.onItemLapping(mMinLappingItemIndex);
+				return 0;
+			}
+
+			updateRenderState(layoutDirection, absDy, true, state);
+		} else {
+			updateRenderState(layoutDirection, absDy, true, state);
+		}
 		final int freeScroll = mRenderState.mScrollingOffset;
-		final int consumed = freeScroll + fill(recycler, mRenderState, state, false);
+		final int consumed = freeScroll + fill(recycler, mRenderState, state, false, false);
+		if (DEBUG) {
+			Log.d(TAG, "scroll freeScroll: " + freeScroll + " consumed: " + consumed);
+		}
+
 		if (consumed < 0) {
 			if (DEBUG) {
 				Log.d(TAG, "Don't have any more elements to scroll");
@@ -880,6 +921,16 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		mOrientationHelper.offsetChildren(-scrolled);
 		if (DEBUG) {
 			Log.d(TAG, "scroll req: " + dy + " scrolled: " + scrolled);
+		}
+		if (dy < 0 && dy != scrolled) {
+			mIsEnabledCalulateLappingItem = false;
+
+			if (mOnLappingItemListener != null) {
+				mIsEnabledCalulateLappingItem = false;
+				mOnLappingItemListener.onItemLapping(mMinLappingItemIndex);
+				return 0;
+			}
+
 		}
 		return scrolled;
 	}
@@ -1036,10 +1087,11 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 	 *            Context passed by the RecyclerView to control scroll steps.
 	 * @param stopOnFocusable
 	 *            If true, filling stops in the first focusable new child
+	 * @param pIsUseLapping
 	 * @return Number of pixels that it added. Useful for scoll functions.
 	 */
 	private int fill(RecyclerView.Recycler recycler, RenderState renderState, RecyclerView.State state,
-			boolean stopOnFocusable) {
+			boolean stopOnFocusable, boolean pIsUseLapping) {
 		// max offset we should set is mFastScroll + available
 		final int start = renderState.mAvailable;
 		if (renderState.mScrollingOffset != RenderState.SCOLLING_OFFSET_NaN) {
@@ -1099,13 +1151,13 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			} else {
 				top = getPaddingTop();
 				bottom = top + mOrientationHelper.getDecoratedMeasurementInOther(view);
-
 				if (renderState.mLayoutDirection == RenderState.LAYOUT_START) {
+					// from left to right direction
 
 					right = renderState.mOffset;
 					left = renderState.mOffset - consumed;
 				} else {
-
+					// from right to left direction
 					left = renderState.mOffset;
 					right = renderState.mOffset + consumed;
 				}
@@ -1143,8 +1195,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 				break;
 			}
 		}
-		
-		makeScaleView();
+
+		makeScaleView(renderState);
 
 		if (DEBUG) {
 			validateChildOrder();
@@ -1153,26 +1205,94 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 	}
 
 	/**
-	 * The magic functions :). Scaled all item of ChildView array. 
+	 * The functions for calculating and updating center of screen when
+	 * necessary.
 	 *
 	 */
-	private void makeScaleView() {
 
-		int lCenterParent = getWidth() / 2;
+	private void updateCenter() {
+		if (mCenterScreen == CENTER_SCREEN_DEFAULT) {
+			mCenterScreen = getWidth() / 2;
+			setOffsetForSmoothController(mCenterScreen / 2);
+
+			if (DEBUG && IS_DEBUG_SCALE) {
+				Log.d(TAG, "Calculated center of parent screen. Now is center: " + mCenterScreen);
+				Log.d(TAG, "Calculated offset for smooth controller: " + getmOffsetForSmoothController());
+			}
+		}
+	}
+
+	/**
+	 * The magic functions :). Scaled all item of ChildView array.
+	 * 
+	 * @param renderState
+	 *
+	 */
+	private void makeScaleView(RenderState renderState) {
+
+		updateCenter();
+		if (mIsEnabledCalulateLappingItem) {
+			if (renderState.mLayoutDirection == RenderState.LAYOUT_START) {
+				// from left to right
+				mMinLappingValue = getWidth();
+			} else {
+				mMinLappingValue = -getWidth();
+
+			}
+
+			mMinLappingItemIndex = 0;
+		}
 		float lCenterChild = 0;
 		float lDeltaXCenterChild = 0;
 		float lScaleValue = 0;
 		for (int i = 0; i < getChildCount(); ++i) {
 			View child = getChildAt(i);
 			lCenterChild = child.getRight() - child.getPivotX();
-			lDeltaXCenterChild = lCenterParent - lCenterChild;
-			if (DEBUG) {
+			lDeltaXCenterChild = mCenterScreen - lCenterChild;
+			if (mIsEnabledCalulateLappingItem) {
+				if (renderState.mLayoutDirection == RenderState.LAYOUT_START) {
+					// from left to right
+					if (lDeltaXCenterChild > 0 && mMinLappingValue > lDeltaXCenterChild) {
+						mMinLappingValue = lDeltaXCenterChild;
+						if (getPosition(child) > 1) {
+							mMinLappingItemIndex = getPosition(child) + 1;
+						} else {
+							mMinLappingItemIndex = 2;
+						}
+						if (DEBUG && IS_DEBUG_SCALE) {
+							Log.w(TAG, "mMinLappingValue = " + mMinLappingValue + " index = " + mMinLappingItemIndex);
+						}
+					} else if (lDeltaXCenterChild < 0 && mMinLappingItemIndex == getPosition(child) + 1) {
+						mMinLappingValue = getWidth();
+						Log.w(TAG, "mMinLappingValue = " + mMinLappingValue + " index = " + mMinLappingItemIndex);
+
+					}
+				} else {
+					if (lDeltaXCenterChild < 0 && mMinLappingValue < lDeltaXCenterChild) {
+						mMinLappingValue = lDeltaXCenterChild;
+						if (getPosition(child) + 1 < getItemCount()) {
+							mMinLappingItemIndex = getPosition(child) + 1;
+						} else {
+							mMinLappingItemIndex = getPosition(child);
+						}
+
+						if (DEBUG && IS_DEBUG_SCALE) {
+							Log.w(TAG, "mMinLappingValue = " + mMinLappingValue + " index = " + mMinLappingItemIndex);
+						}
+					} else if (lDeltaXCenterChild > 0 && mMinLappingItemIndex == getPosition(child) + 1) {
+						mMinLappingValue = -getWidth();
+						Log.w(TAG, "mMinLappingValue = " + mMinLappingValue + " index = " + mMinLappingItemIndex);
+
+					}
+				}
+			}
+			if (DEBUG && IS_DEBUG_SCALE) {
 				Log.d(TAG, "lDeltaXCenterChild value = " + lDeltaXCenterChild);
 			}
 
-			lScaleValue = 2 - ((lCenterParent + Math.abs(lDeltaXCenterChild)) / lCenterParent);
+			lScaleValue = 2 - ((mCenterScreen + Math.abs(lDeltaXCenterChild)) / mCenterScreen);
 			lScaleValue = (1 + lScaleValue) / (2.5f + lScaleValue) + 0.4f;
-			if (DEBUG) {
+			if (DEBUG && IS_DEBUG_SCALE) {
 				Log.d(TAG, "scale value = " + lScaleValue);
 			}
 			if (lScaleValue < 0) {
@@ -1181,7 +1301,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			child.setScaleY(lScaleValue);
 			child.setScaleX(lScaleValue);
 
-			if (DEBUG) {
+			if (DEBUG && IS_DEBUG_SCALE) {
 				Log.d(TAG, "child index = " + i + " centerX = " + (child.getRight() - child.getPivotX()));
 			}
 
@@ -1368,7 +1488,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 				.getStartAfterPadding()));
 		updateRenderState(layoutDir, maxScroll, false, state);
 		mRenderState.mScrollingOffset = RenderState.SCOLLING_OFFSET_NaN;
-		fill(recycler, mRenderState, state, true);
+		fill(recycler, mRenderState, state, true, false);
 		final View nextFocus;
 		if (layoutDir == RenderState.LAYOUT_START) {
 			nextFocus = getChildClosestToStart();
@@ -1694,6 +1814,18 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
 	public int getPositionForInsert() {
 		return mPositionForInsert;
+	}
+
+	public void setOnLappingItemListener(OnLappingItemListener pOnLappingItemListener) {
+		mOnLappingItemListener = pOnLappingItemListener;
+	}
+
+	private int getmOffsetForSmoothController() {
+		return mOffsetForSmoothController;
+	}
+
+	private void setOffsetForSmoothController(int pOffsetForSmoothController) {
+		mOffsetForSmoothController = pOffsetForSmoothController;
 	}
 
 	/**

@@ -8,21 +8,21 @@ import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.RecyclerView.ViewHolder;
 import android.util.Log;
-
-import com.kozhevin.example.carousel.adapters.RecyclerAdapter;
-import com.kozhevin.example.carousel.adapters.WrapperRecyclerViewAdapter;
-import com.kozhevin.example.carousel.listeners.AddedItemListener;
-import com.kozhevin.example.carousel.listeners.DeletedItemListener;
-import com.kozhevin.example.carousel.listeners.OnRecyclerViewItemClickListener;
-
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
+import com.kozhevin.example.carousel.adapters.RecyclerAdapter;
+import com.kozhevin.example.carousel.adapters.WrapperRecyclerViewAdapter;
+import com.kozhevin.example.carousel.listeners.AddedItemListener;
+import com.kozhevin.example.carousel.listeners.DeletedItemListener;
+import com.kozhevin.example.carousel.listeners.OnLappingItemListener;
+import com.kozhevin.example.carousel.listeners.OnRecyclerViewItemClickListener;
+
 public class MainActivity extends Activity {
 
-	private static final int ITEM_COUNT = 3;
+	private static final int ITEM_COUNT = 4;
 
 
 	private final float TRANSLATION_VALUE_X = -1400f;
@@ -32,24 +32,28 @@ public class MainActivity extends Activity {
 	private List<ViewModel> mListModel;
 	private CarouselLayoutManager mLinearLayoutManager;
 	private AddedItemListener mAddedItemListener;
-
+	private RecyclerView mRecyclerView;
 	private WrapperRecyclerViewAdapter<ViewHolder> mWrapperRecyclerViewAdapter;
 
 
 	private DeletedItemListener mDeletedItemListener;
 
+
+	private OnLappingItemListener mOnLappingItemListener;
+
+
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		RecyclerView recyclerView = (RecyclerView) findViewById(R.id.list);
+		mRecyclerView = (RecyclerView) findViewById(R.id.list);
 
-		recyclerView.setHasFixedSize(false);
+		mRecyclerView.setHasFixedSize(false);
 		mListModel = createMockList();
 		mAdapter = new RecyclerAdapter(mListModel, R.layout.item);
 		mWrapperRecyclerViewAdapter = new WrapperRecyclerViewAdapter<RecyclerView.ViewHolder>();
 		mWrapperRecyclerViewAdapter.setAdaper(mAdapter);
-		
 		mAddedItemListener = new AddedItemListener();
 		mAddedItemListener.setOffset(mWrapperRecyclerViewAdapter.getOffsetPositionForAnimations());
 		mAddedItemListener.setWrapperRecyclerViewAdapter(mWrapperRecyclerViewAdapter);
@@ -61,14 +65,14 @@ public class MainActivity extends Activity {
 		mAdapter.setOnAddedItemListener(mAddedItemListener);
 		mAdapter.setOnDeletedItemListener(mDeletedItemListener);
 		
-		recyclerView.setAdapter(mWrapperRecyclerViewAdapter);
+		mRecyclerView.setAdapter(mWrapperRecyclerViewAdapter);
 		mLinearLayoutManager = new CarouselLayoutManager(this, LinearLayout.HORIZONTAL, false);
 		mLinearLayoutManager.supportsPredictiveItemAnimations();
-		recyclerView.setLayoutManager(mLinearLayoutManager);
+		mRecyclerView.setLayoutManager(mLinearLayoutManager);
 		CarouselItemAnimator lDefaultItemAnimator = new CarouselItemAnimator();
 		//TODO need determine a translation of X value 
 		lDefaultItemAnimator.setTranslationValueY(TRANSLATION_VALUE_X);
-		recyclerView.setItemAnimator(lDefaultItemAnimator);
+		mRecyclerView.setItemAnimator(lDefaultItemAnimator);
 		
 		mAdapter.setOnItemClickListener(new OnRecyclerViewItemClickListener<ViewModel>() {
 
@@ -91,8 +95,16 @@ public class MainActivity extends Activity {
 				mListModel.add(new ViewModel(lcount, "Item " + (lcount + 1), null));
 				mAdapter.notifyDataSetChanged();
 				mWrapperRecyclerViewAdapter.notifyDataSetChanged();
+				
+				
 			}
 		});
+		mOnLappingItemListener = new OnLappingItemListener(mRecyclerView, mLinearLayoutManager);
+		mLinearLayoutManager.setOnLappingItemListener(mOnLappingItemListener);
+		if (mWrapperRecyclerViewAdapter.getItemCount() > 2) {
+			mOnLappingItemListener.onItemLapping(2);
+		}
+		
 	}
 
 	private List<ViewModel> createMockList() {

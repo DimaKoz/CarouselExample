@@ -1,5 +1,7 @@
 package com.kozhevin.example.carousel.listeners;
 
+
+
 import android.support.v7.widget.RecyclerView.ViewHolder;
 
 import com.kozhevin.example.carousel.adapters.WrapperRecyclerViewAdapter;

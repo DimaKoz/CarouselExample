@@ -17,6 +17,9 @@ package com.kozhevin.example.carousel;
 
 import java.util.ArrayList;
 
+
+
+
 import android.support.v4.view.ViewCompat;
 import android.support.v4.view.ViewPropertyAnimatorCompat;
 import android.support.v4.view.ViewPropertyAnimatorListener;
