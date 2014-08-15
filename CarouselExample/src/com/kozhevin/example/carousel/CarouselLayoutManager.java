@@ -18,9 +18,6 @@ package com.kozhevin.example.carousel;
 
 import java.util.List;
 
-import com.kozhevin.example.carousel.listeners.OnLappingItemListener;
-
-import android.content.Context;
 import android.graphics.PointF;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -31,25 +28,29 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 
+import com.kozhevin.example.carousel.listeners.OnLappingItemListener;
+
 /**
  * A {@link android.support.v7.widget.RecyclerView.LayoutManager} implementation
  * which provides similar functionality to {@link android.widget.ListView}.
  */
 public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
-	private static final int CENTER_SCREEN_DEFAULT = 0;
+	private static final int		DEFAULT_WIDTH_VIEW_RATIO		= 2 / 3;
 
-	private static final String TAG = "LinearLayoutManager";
+	private static final int		CENTER_SCREEN_DEFAULT			= 0;
 
-	private static final boolean DEBUG = true;
+	private static final String		TAG								= "LinearLayoutManager";
 
-	private static final boolean IS_DEBUG_SCALE = true;
+	private static final boolean	DEBUG							= true;
 
-	public static final int HORIZONTAL = LinearLayout.HORIZONTAL;
+	private static final boolean	IS_DEBUG_SCALE					= true;
 
-	public static final int VERTICAL = LinearLayout.VERTICAL;
+	public static final int			HORIZONTAL						= LinearLayout.HORIZONTAL;
 
-	public static final int INVALID_OFFSET = Integer.MIN_VALUE;
+	public static final int			VERTICAL						= LinearLayout.VERTICAL;
+
+	public static final int			INVALID_OFFSET					= Integer.MIN_VALUE;
 
 	/**
 	 * While trying to find next view to focus, LinearLayoutManager will not try
@@ -57,104 +58,88 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 	 * layout is vertical, total space is the height minus padding, if layout is
 	 * horizontal, total space is the width minus padding.
 	 */
-	private static final float MAX_SCROLL_FACTOR = 0.33f;
+	private static final float		MAX_SCROLL_FACTOR				= 0.33f;
 
 	/**
 	 * Current orientation. Either {@link #HORIZONTAL} or {@link #VERTICAL}
 	 */
-	private int mOrientation;
+	private int						mOrientation;
 
 	/**
 	 * Helper class that keeps temporary rendering state. It does not keep state
 	 * after rendering is complete but we still keep a reference to re-use the
 	 * same object.
 	 */
-	private RenderState mRenderState;
+	private RenderState				mRenderState;
 
 	/**
 	 * Many calculations are made depending on orientation. To keep it clean,
 	 * this interface helps {@link CarouselLayoutManager} make those decisions.
-	 * Based on {@link #mOrientation}, an implementation is lazily created in
-	 * {@link #ensureRenderState} method.
+	 * Based on {@link #mOrientation}, an implementation is lazily created in {@link #ensureRenderState} method.
 	 */
-	OrientationHelper mOrientationHelper;
+	OrientationHelper				mOrientationHelper;
 
 	/**
 	 * We need to track this so that we can ignore current position when it
 	 * changes.
 	 */
-	private boolean mLastStackFromEnd;
+	private boolean					mLastStackFromEnd;
 
 	/**
 	 * Defines if layout should be calculated from end to start.
 	 *
 	 * @see #mShouldReverseLayout
 	 */
-	private boolean mReverseLayout = false;
+	private boolean					mReverseLayout					= false;
 
 	/**
 	 * This keeps the final value for how LayoutManager shouls start laying out
 	 * views. It is calculated by checking {@link #getReverseLayout()} and
-	 * View's layout direction.
-	 * {@link #onLayoutChildren(RecyclerView.Recycler, RecyclerView.State)} is
+	 * View's layout direction. {@link #onLayoutChildren(RecyclerView.Recycler, RecyclerView.State)} is
 	 * run.
 	 */
-	private boolean mShouldReverseLayout = false;
+	private boolean					mShouldReverseLayout			= false;
 
 	/**
-	 * Works the same way as
-	 * {@link android.widget.AbsListView#setStackFromBottom(boolean)} and it
-	 * supports both orientations. see
-	 * {@link android.widget.AbsListView#setStackFromBottom(boolean)}
+	 * Works the same way as {@link android.widget.AbsListView#setStackFromBottom(boolean)} and it
+	 * supports both orientations. see {@link android.widget.AbsListView#setStackFromBottom(boolean)}
 	 */
-	private boolean mStackFromEnd = false;
+	private boolean					mStackFromEnd					= false;
 
 	/**
 	 * When LayoutManager needs to scroll to a position, it sets this variable
 	 * and requests a layout which will check this variable and re-layout
 	 * accordingly.
 	 */
-	private int mPendingScrollPosition = RecyclerView.NO_POSITION;
+	private int						mPendingScrollPosition			= RecyclerView.NO_POSITION;
 
 	/**
-	 * Used to keep the offset value when
-	 * {@link #scrollToPositionWithOffset(int, int)} is called.
+	 * Used to keep the offset value when {@link #scrollToPositionWithOffset(int, int)} is called.
 	 */
-	private int mPendingScrollPositionOffset = INVALID_OFFSET;
+	private int						mPendingScrollPositionOffset	= INVALID_OFFSET;
 
-	private SavedState mPendingSavedState = null;
+	private SavedState				mPendingSavedState				= null;
 
-	private int mPositionForInsert;
+	private int						mPositionForInsert;
 
-	private int mCenterScreen = CENTER_SCREEN_DEFAULT;
+	private int						mCenterScreen					= CENTER_SCREEN_DEFAULT;
 
-	private float mMinLappingValue;
+	private float					mMinLappingValue;
 
-	private OnLappingItemListener mOnLappingItemListener;
+	private OnLappingItemListener	mOnLappingItemListener;
 
-	/**
-	 * Creates a vertical LinearLayoutManager
-	 *
-	 * @param context
-	 *            Current context, will be used to access resources.
-	 */
-	public CarouselLayoutManager(Context context) {
-		this(context, VERTICAL, false);
-	}
 
 	/**
-	 * @param context
-	 *            Current context, will be used to access resources.
 	 * @param orientation
-	 *            Layout orientation. Should be {@link #HORIZONTAL} or
-	 *            {@link #VERTICAL}.
+	 *            Layout orientation. Should be {@link #HORIZONTAL} or {@link #VERTICAL}.
 	 * @param reverseLayout
 	 *            When set to true, renders the layout from end to start.
 	 */
-	public CarouselLayoutManager(Context context, int orientation, boolean reverseLayout) {
+	public CarouselLayoutManager(int orientation, boolean reverseLayout) {
 		setOrientation(orientation);
 		setReverseLayout(reverseLayout);
 	}
+
 
 	/**
 	 * {@inheritDoc}
@@ -163,6 +148,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 	public RecyclerView.LayoutParams generateDefaultLayoutParams() {
 		return new RecyclerView.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
 	}
+
 
 	@Override
 	public Parcelable onSaveInstanceState() {
@@ -178,13 +164,15 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 				state.mAnchorOffset = mOrientationHelper.getEndAfterPadding()
 						- mOrientationHelper.getDecoratedEnd(refChild);
 				state.mAnchorPosition = getPosition(refChild);
-			} else {
+			}
+			else {
 				final View refChild = getChildClosestToStart();
 				state.mAnchorPosition = getPosition(refChild);
 				state.mAnchorOffset = mOrientationHelper.getDecoratedStart(refChild)
 						- mOrientationHelper.getStartAfterPadding();
 			}
-		} else {
+		}
+		else {
 			state.mAnchorPosition = 0;
 			state.mAnchorOffset = 0;
 		}
@@ -194,18 +182,21 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return state;
 	}
 
+
 	@Override
 	public void onRestoreInstanceState(Parcelable state) {
 		if (state instanceof SavedState) {
-			mPendingSavedState = (SavedState) state;
+			mPendingSavedState = (SavedState)state;
 			requestLayout();
 			if (DEBUG) {
 				Log.d(TAG, "loaded saved state");
 			}
-		} else if (DEBUG) {
+		}
+		else if (DEBUG) {
 			Log.d(TAG, "invalid saved state class");
 		}
 	}
+
 
 	/**
 	 * @return true if {@link #getOrientation()} is {@link #HORIZONTAL}
@@ -215,6 +206,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return mOrientation == HORIZONTAL;
 	}
 
+
 	/**
 	 * @return true if {@link #getOrientation()} is {@link #VERTICAL}
 	 */
@@ -223,9 +215,9 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return mOrientation == VERTICAL;
 	}
 
+
 	/**
-	 * Compatibility support for
-	 * {@link android.widget.AbsListView#setStackFromBottom(boolean)}
+	 * Compatibility support for {@link android.widget.AbsListView#setStackFromBottom(boolean)}
 	 */
 	public void setStackFromEnd(boolean stackFromEnd) {
 		if (mPendingSavedState != null && mPendingSavedState.mStackFromEnd != stackFromEnd) {
@@ -239,9 +231,11 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		requestLayout();
 	}
 
+
 	public boolean getStackFromEnd() {
 		return mStackFromEnd;
 	}
+
 
 	/**
 	 * Returns the current orientaion of the layout.
@@ -254,9 +248,9 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return mOrientation;
 	}
 
+
 	/**
-	 * Sets the orientation of the layout.
-	 * {@link android.support.v7.widget.LinearLayoutManager} will do its best to
+	 * Sets the orientation of the layout. {@link android.support.v7.widget.LinearLayoutManager} will do its best to
 	 * keep scroll position.
 	 *
 	 * @param orientation
@@ -279,20 +273,23 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		mCenterScreen = CENTER_SCREEN_DEFAULT;
 	}
 
+
 	/**
 	 * Calculates the view layout order. (e.g. from end to start or start to
-	 * end) RTL layout support is applied automatically. So if layout is RTL and
-	 * {@link #getReverseLayout()} is {@code true}, elements will be laid out
+	 * end) RTL layout support is applied automatically. So if layout is RTL and {@link #getReverseLayout()} is {@code true}, elements will be laid
+	 * out
 	 * starting from left.
 	 */
 	private void resolveShouldLayoutReverse() {
 		// A == B is the same result, but we rather keep it readable
 		if (mOrientation == VERTICAL || !isLayoutRTL()) {
 			mShouldReverseLayout = mReverseLayout;
-		} else {
+		}
+		else {
 			mShouldReverseLayout = !mReverseLayout;
 		}
 	}
+
 
 	/**
 	 * Returns if views are laid out from the opposite direction of the layout.
@@ -304,6 +301,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return mReverseLayout;
 	}
 
+
 	/**
 	 * Used to reverse item traversal and layout order. This behaves similar to
 	 * the layout change for RTL views. When set to true, first item is rendered
@@ -311,11 +309,9 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 	 *
 	 * For horizontal layouts, it depends on the layout direction. When set to
 	 * true, If {@link android.support.v7.widget.RecyclerView} is LTR, than it
-	 * will render from RTL, if {@link android.support.v7.widget.RecyclerView}
-	 * is RTL, it will render from LTR.
+	 * will render from RTL, if {@link android.support.v7.widget.RecyclerView} is RTL, it will render from LTR.
 	 *
-	 * If you are looking for the exact same behavior of
-	 * {@link android.widget.AbsListView#setStackFromBottom(boolean)}, use
+	 * If you are looking for the exact same behavior of {@link android.widget.AbsListView#setStackFromBottom(boolean)}, use
 	 * {@link #setStackFromEnd(boolean)}
 	 */
 	public void setReverseLayout(boolean reverseLayout) {
@@ -329,6 +325,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		mReverseLayout = reverseLayout;
 		requestLayout();
 	}
+
 
 	/**
 	 * {@inheritDoc}
@@ -347,23 +344,19 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return null;
 	}
 
+
 	/**
 	 * <p>
-	 * Returns the amount of extra space that should be rendered by
-	 * LinearLayoutManager. By default,
-	 * {@link android.support.v7.widget.LinearLayoutManager} lays out 1 extra
-	 * page of items while smooth scrolling and 0 otherwise. You can override
+	 * Returns the amount of extra space that should be rendered by LinearLayoutManager. By default,
+	 * {@link android.support.v7.widget.LinearLayoutManager} lays out 1 extra page of items while smooth scrolling and 0 otherwise. You can override
 	 * this method to implement your custom layout pre-cache logic.
 	 * </p>
 	 * <p>
-	 * Laying out invisible elements will eventually come with performance cost.
-	 * On the other hand, in places like smooth scrolling to an unknown
-	 * location, this extra content helps LayoutManager to calculate a much
-	 * smoother scrolling; which improves user experience.
+	 * Laying out invisible elements will eventually come with performance cost. On the other hand, in places like smooth scrolling to an unknown
+	 * location, this extra content helps LayoutManager to calculate a much smoother scrolling; which improves user experience.
 	 * </p>
 	 * <p>
-	 * You can also use this if you are trying to pre-render your upcoming
-	 * views.
+	 * You can also use this if you are trying to pre-render your upcoming views.
 	 * </p>
 	 *
 	 * @return The extra space that should be laid out (in pixels).
@@ -371,14 +364,17 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 	protected int getExtraLayoutSpace(RecyclerView.State state) {
 		if (state.hasTargetScrollPosition()) {
 			return mOrientationHelper.getTotalSpace();
-		} else {
+		}
+		else {
 			return 0;
 		}
 	}
 
+
 	@Override
 	public void smoothScrollToPosition(RecyclerView recyclerView, RecyclerView.State state, int position) {
 		CarouselSmoothScroller lCarouselSmoothScroller = new CarouselSmoothScroller(recyclerView.getContext()) {
+
 			@Override
 			public PointF computeScrollVectorForPosition(int targetPosition) {
 				return CarouselLayoutManager.this.computeScrollVectorForPosition(targetPosition);
@@ -389,6 +385,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		startSmoothScroll(lCarouselSmoothScroller);
 	}
 
+
 	public PointF computeScrollVectorForPosition(int targetPosition) {
 		if (getChildCount() == 0) {
 			return null;
@@ -397,10 +394,12 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		final int direction = targetPosition < firstChildPos != mShouldReverseLayout ? -1 : 1;
 		if (mOrientation == HORIZONTAL) {
 			return new PointF(direction, 0);
-		} else {
+		}
+		else {
 			return new PointF(0, direction);
 		}
 	}
+
 
 	/**
 	 * {@inheritDoc}
@@ -460,10 +459,12 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 				layoutFromEnd = mPendingSavedState.mAnchorLayoutFromEnd;
 				if (layoutFromEnd) {
 					anchorCoordinate = mOrientationHelper.getEndAfterPadding() - mPendingSavedState.mAnchorOffset;
-				} else {
+				}
+				else {
 					anchorCoordinate = mOrientationHelper.getStartAfterPadding() + mPendingSavedState.mAnchorOffset;
 				}
-			} else if (mPendingScrollPositionOffset == INVALID_OFFSET) {
+			}
+			else if (mPendingScrollPositionOffset == INVALID_OFFSET) {
 				View child = findViewByPosition(mPendingScrollPosition);
 				if (child != null) {
 					final int startGap = mOrientationHelper.getDecoratedStart(child)
@@ -475,53 +476,64 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 						// item does not fit. fix depending on layout direction
 						anchorCoordinate = layoutFromEnd ? mOrientationHelper.getEndAfterPadding() : mOrientationHelper
 								.getStartAfterPadding();
-					} else if (startGap < 0) {
+					}
+					else if (startGap < 0) {
 						anchorCoordinate = mOrientationHelper.getStartAfterPadding();
 						layoutFromEnd = false;
-					} else if (endGap < 0) {
+					}
+					else if (endGap < 0) {
 						anchorCoordinate = mOrientationHelper.getEndAfterPadding();
 						layoutFromEnd = true;
-					} else {
+					}
+					else {
 						anchorCoordinate = layoutFromEnd ? mOrientationHelper.getDecoratedEnd(child)
 								: mOrientationHelper.getDecoratedStart(child);
 					}
-				} else { // item is not visible.
+				}
+				else { // item is not visible.
 					if (getChildCount() > 0) {
 						// get position of any child, does not matter
 						int pos = getPosition(getChildAt(0));
 						if (mPendingScrollPosition < pos == mShouldReverseLayout) {
 							anchorCoordinate = mOrientationHelper.getEndAfterPadding();
 							layoutFromEnd = true;
-						} else {
+						}
+						else {
 							anchorCoordinate = mOrientationHelper.getStartAfterPadding();
 							layoutFromEnd = false;
 						}
-					} else {
+					}
+					else {
 						anchorCoordinate = layoutFromEnd ? mOrientationHelper.getEndAfterPadding() : mOrientationHelper
 								.getStartAfterPadding();
 					}
 				}
-			} else {
+			}
+			else {
 				// override layout from end values for consistency
 				if (mShouldReverseLayout) {
 					anchorCoordinate = mOrientationHelper.getEndAfterPadding() - mPendingScrollPositionOffset;
 					layoutFromEnd = true;
-				} else {
+				}
+				else {
 					anchorCoordinate = mOrientationHelper.getStartAfterPadding() + mPendingScrollPositionOffset;
 					layoutFromEnd = false;
 				}
 			}
-		} else if (getChildCount() > 0 && !stackFromEndChanged) {
+		}
+		else if (getChildCount() > 0 && !stackFromEndChanged) {
 			if (layoutFromEnd) {
 				View referenceChild = getChildClosestToEnd();
 				anchorCoordinate = mOrientationHelper.getDecoratedEnd(referenceChild);
 				anchorItemPosition = getPosition(referenceChild);
-			} else {
+			}
+			else {
 				View referenceChild = getChildClosestToStart();
 				anchorCoordinate = mOrientationHelper.getDecoratedStart(referenceChild);
 				anchorItemPosition = getPosition(referenceChild);
 			}
-		} else {
+		}
+		else {
 			anchorCoordinate = layoutFromEnd ? mOrientationHelper.getEndAfterPadding() : mOrientationHelper
 					.getStartAfterPadding();
 			anchorItemPosition = mStackFromEnd ? state.getItemCount() - 1 : 0;
@@ -535,7 +547,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		if (before == mShouldReverseLayout) {
 			extraForEnd = extra;
 			extraForStart = 0;
-		} else {
+		}
+		else {
 			extraForStart = extra;
 			extraForEnd = 0;
 		}
@@ -567,7 +580,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 				fixOffset = fixLayoutStartGap(startOffset, recycler, state, false);
 				startOffset += fixOffset;
 				endOffset += fixOffset;
-			} else {
+			}
+			else {
 				int fixOffset = fixLayoutStartGap(startOffset, recycler, state, true);
 				startOffset += fixOffset;
 				endOffset += fixOffset;
@@ -597,7 +611,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 						: RenderState.LAYOUT_END;
 				if (direction == RenderState.LAYOUT_START) {
 					scrapExtraStart += mOrientationHelper.getDecoratedMeasurement(scrap.itemView);
-				} else {
+				}
+				else {
 					scrapExtraEnd += mOrientationHelper.getDecoratedMeasurement(scrap.itemView);
 				}
 			}
@@ -637,6 +652,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		}
 	}
 
+
 	/**
 	 * @return The final offset amount for children
 	 */
@@ -646,7 +662,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		int fixOffset = 0;
 		if (gap > 0) {
 			fixOffset = -scrollBy(-gap, recycler, state);
-		} else {
+		}
+		else {
 			return 0; // nothing to fix
 		}
 		// move offset according to scroll amount
@@ -662,6 +679,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return fixOffset;
 	}
 
+
 	/**
 	 * @return The final offset amount for children
 	 */
@@ -672,7 +690,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		if (gap > 0) {
 			// check if we should fix this gap.
 			fixOffset = -scrollBy(gap, recycler, state);
-		} else {
+		}
+		else {
 			return 0; // nothing to fix
 		}
 		startOffset += fixOffset;
@@ -687,6 +706,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return fixOffset;
 	}
 
+
 	private void updateRenderStateToFillEnd(int itemPosition, int offset) {
 		mRenderState.mAvailable = mOrientationHelper.getEndAfterPadding() - offset;
 		mRenderState.mItemDirection = mShouldReverseLayout ? RenderState.ITEM_DIRECTION_HEAD
@@ -696,6 +716,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		mRenderState.mOffset = offset;
 		mRenderState.mScrollingOffset = RenderState.SCOLLING_OFFSET_NaN;
 	}
+
 
 	private void updateRenderStateToFillStart(int itemPosition, int offset) {
 		mRenderState.mAvailable = offset - mOrientationHelper.getStartAfterPadding();
@@ -708,9 +729,11 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
 	}
 
+
 	private boolean isLayoutRTL() {
 		return getLayoutDirection() == ViewCompat.LAYOUT_DIRECTION_RTL;
 	}
+
 
 	void ensureRenderState() {
 		if (mRenderState == null) {
@@ -722,22 +745,20 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		}
 	}
 
+
 	/**
 	 * <p>
 	 * Scroll the RecyclerView to make the position visible.
 	 * </p>
 	 *
 	 * <p>
-	 * RecyclerView will scroll the minimum amount that is necessary to make the
-	 * target position visible. If you are looking for a similar behavior to
-	 * {@link android.widget.ListView#setSelection(int)} or
-	 * {@link android.widget.ListView#setSelectionFromTop(int, int)}, use
+	 * RecyclerView will scroll the minimum amount that is necessary to make the target position visible. If you are looking for a similar behavior to
+	 * {@link android.widget.ListView#setSelection(int)} or {@link android.widget.ListView#setSelectionFromTop(int, int)}, use
 	 * {@link #scrollToPositionWithOffset(int, int)}.
 	 * </p>
 	 *
 	 * <p>
-	 * Note that scroll position change will not be reflected until the next
-	 * layout call.
+	 * Note that scroll position change will not be reflected until the next layout call.
 	 * </p>
 	 *
 	 * @param position
@@ -751,20 +772,18 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		requestLayout();
 	}
 
+
 	/**
 	 * <p>
-	 * Scroll to the specified adapter position with the given offset from
-	 * layout start.
+	 * Scroll to the specified adapter position with the given offset from layout start.
 	 * </p>
 	 *
 	 * <p>
-	 * Note that scroll position change will not be reflected until the next
-	 * layout call.
+	 * Note that scroll position change will not be reflected until the next layout call.
 	 * </p>
 	 *
 	 * <p>
-	 * If you are just trying to make a position visible, use
-	 * {@link #scrollToPosition(int)}.
+	 * If you are just trying to make a position visible, use {@link #scrollToPosition(int)}.
 	 * </p>
 	 *
 	 * @param position
@@ -781,6 +800,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		requestLayout();
 	}
 
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -791,6 +811,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		}
 		return scrollBy(dx, recycler, state);
 	}
+
 
 	/**
 	 * {@inheritDoc}
@@ -803,6 +824,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return scrollBy(dy, recycler, state);
 	}
 
+
 	@Override
 	public int computeHorizontalScrollOffset(RecyclerView.State state) {
 		if (getChildCount() == 0) {
@@ -811,6 +833,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		final int topPosition = getPosition(getChildClosestToStart());
 		return mShouldReverseLayout ? state.getItemCount() - 1 - topPosition : topPosition;
 	}
+
 
 	@Override
 	public int computeVerticalScrollOffset(RecyclerView.State state) {
@@ -821,25 +844,30 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return mShouldReverseLayout ? state.getItemCount() - 1 - topPosition : topPosition;
 	}
 
+
 	@Override
 	public int computeHorizontalScrollExtent(RecyclerView.State state) {
 		return getChildCount();
 	}
+
 
 	@Override
 	public int computeVerticalScrollExtent(RecyclerView.State state) {
 		return getChildCount();
 	}
 
+
 	@Override
 	public int computeHorizontalScrollRange(RecyclerView.State state) {
 		return state.getItemCount();
 	}
 
+
 	@Override
 	public int computeVerticalScrollRange(RecyclerView.State state) {
 		return state.getItemCount();
 	}
+
 
 	private void updateRenderState(int layoutDirection, int requiredSpace, boolean canUseExistingSpace,
 			RecyclerView.State state) {
@@ -858,7 +886,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			// (independent of layout)
 			fastScrollSpace = mOrientationHelper.getDecoratedEnd(child) - mOrientationHelper.getEndAfterPadding();
 
-		} else {
+		}
+		else {
 			final View child = getChildClosestToStart();
 			mRenderState.mItemDirection = mShouldReverseLayout ? RenderState.ITEM_DIRECTION_TAIL
 					: RenderState.ITEM_DIRECTION_HEAD;
@@ -873,11 +902,11 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		mRenderState.mScrollingOffset = fastScrollSpace;
 	}
 
-	private int mOffsetForSmoothController;
+	private int		mOffsetForSmoothController;
 
-	private boolean mIsEnabledCalulateLappingItem;
+	private boolean	mIsEnabledCalulateLappingItem;
 
-	private int mMinLappingItemIndex;
+	private int		mMinLappingItemIndex;
 
 
 	private int scrollBy(int dy, RecyclerView.Recycler recycler, RecyclerView.State state) {
@@ -902,7 +931,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			}
 
 			updateRenderState(layoutDirection, absDy, true, state);
-		} else {
+		}
+		else {
 			updateRenderState(layoutDirection, absDy, true, state);
 		}
 		final int freeScroll = mRenderState.mScrollingOffset;
@@ -935,6 +965,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return scrolled;
 	}
 
+
 	/**
 	 * Recycles children between given indices.
 	 *
@@ -954,20 +985,21 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			for (int i = endIndex - 1; i >= startIndex; i--) {
 				removeAndRecycleViewAt(i, recycler);
 			}
-		} else {
+		}
+		else {
 			for (int i = startIndex; i > endIndex; i--) {
 				removeAndRecycleViewAt(i, recycler);
 			}
 		}
 	}
 
+
 	/**
 	 * Recycles views that went out of bounds after scrolling towards the end of
 	 * the layout.
 	 *
 	 * @param recycler
-	 *            Recycler instance of
-	 *            {@link android.support.v7.widget.RecyclerView}
+	 *            Recycler instance of {@link android.support.v7.widget.RecyclerView}
 	 * @param dt
 	 *            This can be used to add additional padding to the visible
 	 *            area. This is used to detect children that will go out of
@@ -992,7 +1024,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 					return;
 				}
 			}
-		} else {
+		}
+		else {
 			for (int i = 0; i < childCount; i++) {
 				View child = getChildAt(i);
 				if (mOrientationHelper.getDecoratedEnd(child) > limit) {// stop
@@ -1004,13 +1037,13 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		}
 	}
 
+
 	/**
 	 * Recycles views that went out of bounds after scrolling towards the start
 	 * of the layout.
 	 *
 	 * @param recycler
-	 *            Recycler instance of
-	 *            {@link android.support.v7.widget.RecyclerView}
+	 *            Recycler instance of {@link android.support.v7.widget.RecyclerView}
 	 * @param dt
 	 *            This can be used to add additional padding to the visible
 	 *            area. This is used to detect children that will go out of
@@ -1035,7 +1068,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 					return;
 				}
 			}
-		} else {
+		}
+		else {
 			for (int i = childCount - 1; i >= 0; i--) {
 				View child = getChildAt(i);
 				if (mOrientationHelper.getDecoratedStart(child) < limit) {// stop
@@ -1048,6 +1082,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
 	}
 
+
 	/**
 	 * Helper method to call appropriate recycle method depending on current
 	 * render layout direction
@@ -1057,26 +1092,24 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 	 * @param renderState
 	 *            Current render state. Right now, this object does not change
 	 *            but we may consider moving it out of this view so passing
-	 *            around as a parameter for now, rather than accessing
-	 *            {@link #mRenderState}
-	 * @see #recycleViewsFromStart(android.support.v7.widget.RecyclerView.Recycler,
-	 *      int)
-	 * @see #recycleViewsFromEnd(android.support.v7.widget.RecyclerView.Recycler,
-	 *      int)
+	 *            around as a parameter for now, rather than accessing {@link #mRenderState}
+	 * @see #recycleViewsFromStart(android.support.v7.widget.RecyclerView.Recycler, int)
+	 * @see #recycleViewsFromEnd(android.support.v7.widget.RecyclerView.Recycler, int)
 	 * @see android.support.v7.widget.LinearLayoutManager.RenderState#mLayoutDirection
 	 */
 	private void recycleByRenderState(RecyclerView.Recycler recycler, RenderState renderState) {
 		if (renderState.mLayoutDirection == RenderState.LAYOUT_START) {
 			recycleViewsFromEnd(recycler, renderState.mScrollingOffset);
-		} else {
+		}
+		else {
 			recycleViewsFromStart(recycler, renderState.mScrollingOffset);
 		}
 	}
 
+
 	/**
 	 * The magic functions :). Fills the given layout, defined by the
-	 * renderState. This is fairly independent from the rest of the
-	 * {@link android.support.v7.widget.LinearLayoutManager} and with little
+	 * renderState. This is fairly independent from the rest of the {@link android.support.v7.widget.LinearLayoutManager} and with little
 	 * change, can be made publicly available as a helper class.
 	 *
 	 * @param recycler
@@ -1114,11 +1147,12 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 				// no more items to layout.
 				break;
 			}
-			RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
+			RecyclerView.LayoutParams params = (RecyclerView.LayoutParams)view.getLayoutParams();
 			if (!params.isItemRemoved() && mRenderState.mScrapList == null) {
 				if (mShouldReverseLayout == (renderState.mLayoutDirection == RenderState.LAYOUT_START)) {
 					addView(view);
-				} else {
+				}
+				else {
 					addView(view, 0);
 				}
 			}
@@ -1129,26 +1163,30 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			int consumed;
 			if (mOrientation == VERTICAL) {
 				consumed = (getWidth() - getPaddingLeft() - getPaddingRight()) / 2;
-			} else {
-				consumed = (getWidth() - getPaddingTop() - getPaddingBottom()) / 2;
+			}
+			else {
+				consumed = (getWidth() - getPaddingTop() - getPaddingBottom()) * 2 / 3/* 720 */;
 			}
 
 			if (mOrientation == VERTICAL) {
 				if (isLayoutRTL()) {
 					right = getWidth() - getPaddingRight();
 					left = right - mOrientationHelper.getDecoratedMeasurementInOther(view);
-				} else {
+				}
+				else {
 					left = getPaddingLeft();
 					right = left + mOrientationHelper.getDecoratedMeasurementInOther(view);
 				}
 				if (renderState.mLayoutDirection == RenderState.LAYOUT_START) {
 					bottom = renderState.mOffset;
 					top = renderState.mOffset - consumed;
-				} else {
+				}
+				else {
 					top = renderState.mOffset;
 					bottom = renderState.mOffset + consumed;
 				}
-			} else {
+			}
+			else {
 				top = getPaddingTop();
 				bottom = top + mOrientationHelper.getDecoratedMeasurementInOther(view);
 				if (renderState.mLayoutDirection == RenderState.LAYOUT_START) {
@@ -1156,7 +1194,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
 					right = renderState.mOffset;
 					left = renderState.mOffset - consumed;
-				} else {
+				}
+				else {
 					// from right to left direction
 					left = renderState.mOffset;
 					right = renderState.mOffset + consumed;
@@ -1179,6 +1218,9 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 				// important for recycling
 				remainingSpace -= consumed;
 			}
+
+			params.width = consumed;
+			view.setLayoutParams(params);
 
 			if (renderState.mScrollingOffset != RenderState.SCOLLING_OFFSET_NaN) {
 				renderState.mScrollingOffset += consumed;
@@ -1204,6 +1246,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return start - renderState.mAvailable;
 	}
 
+
 	/**
 	 * The functions for calculating and updating center of screen when
 	 * necessary.
@@ -1213,7 +1256,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 	private void updateCenter() {
 		if (mCenterScreen == CENTER_SCREEN_DEFAULT) {
 			mCenterScreen = getWidth() / 2;
-			setOffsetForSmoothController(mCenterScreen / 2);
+			setOffsetForSmoothController(mCenterScreen - (getWidth() * DEFAULT_WIDTH_VIEW_RATIO));
 
 			if (DEBUG && IS_DEBUG_SCALE) {
 				Log.d(TAG, "Calculated center of parent screen. Now is center: " + mCenterScreen);
@@ -1221,6 +1264,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			}
 		}
 	}
+
 
 	/**
 	 * The magic functions :). Scaled all item of ChildView array.
@@ -1235,7 +1279,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			if (renderState.mLayoutDirection == RenderState.LAYOUT_START) {
 				// from left to right
 				mMinLappingValue = getWidth();
-			} else {
+			}
+			else {
 				mMinLappingValue = -getWidth();
 
 			}
@@ -1256,30 +1301,35 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 						mMinLappingValue = lDeltaXCenterChild;
 						if (getPosition(child) > 1) {
 							mMinLappingItemIndex = getPosition(child) + 1;
-						} else {
+						}
+						else {
 							mMinLappingItemIndex = 2;
 						}
 						if (DEBUG && IS_DEBUG_SCALE) {
 							Log.w(TAG, "mMinLappingValue = " + mMinLappingValue + " index = " + mMinLappingItemIndex);
 						}
-					} else if (lDeltaXCenterChild < 0 && mMinLappingItemIndex == getPosition(child) + 1) {
+					}
+					else if (lDeltaXCenterChild < 0 && mMinLappingItemIndex == getPosition(child) + 1) {
 						mMinLappingValue = getWidth();
 						Log.w(TAG, "mMinLappingValue = " + mMinLappingValue + " index = " + mMinLappingItemIndex);
 
 					}
-				} else {
+				}
+				else {
 					if (lDeltaXCenterChild < 0 && mMinLappingValue < lDeltaXCenterChild) {
 						mMinLappingValue = lDeltaXCenterChild;
 						if (getPosition(child) + 1 < getItemCount()) {
 							mMinLappingItemIndex = getPosition(child) + 1;
-						} else {
+						}
+						else {
 							mMinLappingItemIndex = getPosition(child);
 						}
 
 						if (DEBUG && IS_DEBUG_SCALE) {
 							Log.w(TAG, "mMinLappingValue = " + mMinLappingValue + " index = " + mMinLappingItemIndex);
 						}
-					} else if (lDeltaXCenterChild > 0 && mMinLappingItemIndex == getPosition(child) + 1) {
+					}
+					else if (lDeltaXCenterChild > 0 && mMinLappingItemIndex == getPosition(child) + 1) {
 						mMinLappingValue = -getWidth();
 						Log.w(TAG, "mMinLappingValue = " + mMinLappingValue + " index = " + mMinLappingItemIndex);
 
@@ -1290,9 +1340,17 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 				Log.d(TAG, "lDeltaXCenterChild value = " + lDeltaXCenterChild);
 			}
 
-			lScaleValue = 2 - ((mCenterScreen + Math.abs(lDeltaXCenterChild)) / mCenterScreen);
-			lScaleValue = (1 + lScaleValue) / (2.5f + lScaleValue) + 0.4f;
-			if (DEBUG && IS_DEBUG_SCALE) {
+			/*
+			 * scale = a + b * cos(w / pi * dx) a = (max + min) / 2 b = (max -
+			 * min) / 2 dx - shift from the center max - the maximum value of
+			 * scale (1) min - the minimum value of scale w - When dx = 0, the
+			 * value of scale will be max, when dx = +w or -w, the value will be
+			 * min pi - math PI constant
+			 * 
+			 * assume max = 1, min = 0.4; then a = 0.7, b = 0.3
+			 */
+			lScaleValue = (float)(0.7 + 0.3 * Math.cos(lDeltaXCenterChild * Math.PI / getWidth() / 2));
+			if (DEBUG) {
 				Log.d(TAG, "scale value = " + lScaleValue);
 			}
 			if (lScaleValue < 0) {
@@ -1309,16 +1367,15 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
 	}
 
+
 	/**
 	 * Converts a focusDirection to orientation.
 	 *
 	 * @param focusDirection
-	 *            One of {@link View#FOCUS_UP}, {@link View#FOCUS_DOWN},
-	 *            {@link View#FOCUS_LEFT}, {@link View#FOCUS_RIGHT},
+	 *            One of {@link View#FOCUS_UP}, {@link View#FOCUS_DOWN}, {@link View#FOCUS_LEFT}, {@link View#FOCUS_RIGHT},
 	 *            {@link View#FOCUS_BACKWARD}, {@link View#FOCUS_FORWARD} or 0
 	 *            for not applicable
-	 * @return {@link RenderState#LAYOUT_START} or
-	 *         {@link RenderState#LAYOUT_END} if focus direction is applicable
+	 * @return {@link RenderState#LAYOUT_START} or {@link RenderState#LAYOUT_END} if focus direction is applicable
 	 *         to current state, {@link RenderState#INVALID_LAYOUT} otherwise.
 	 */
 	private int convertFocusDirectionToLayoutDirection(int focusDirection) {
@@ -1344,6 +1401,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
 	}
 
+
 	/**
 	 * Convenience method to find the child closes to start. Caller should check
 	 * it has enough children.
@@ -1353,6 +1411,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 	private View getChildClosestToStart() {
 		return getChildAt(mShouldReverseLayout ? getChildCount() - 1 : 0);
 	}
+
 
 	/**
 	 * Convenience method to find the child closes to end. Caller should check
@@ -1364,21 +1423,18 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return getChildAt(mShouldReverseLayout ? 0 : getChildCount() - 1);
 	}
 
+
 	/**
 	 * Returns the adapter position of the first visible view.
 	 * <p>
-	 * Note that, this value is not affected by layout orientation or item order
-	 * traversal. ({@link #setReverseLayout(boolean)}). Views are sorted by
+	 * Note that, this value is not affected by layout orientation or item order traversal. ({@link #setReverseLayout(boolean)}). Views are sorted by
 	 * their positions in the adapter, not in the layout.
 	 * <p>
-	 * If RecyclerView has item decorators, they will be considered in
-	 * calculations as well.
+	 * If RecyclerView has item decorators, they will be considered in calculations as well.
 	 * <p>
-	 * LinearLayoutManager may pre-cache some views that are not necessarily
-	 * visible. Those views are ignored in this method.
+	 * LinearLayoutManager may pre-cache some views that are not necessarily visible. Those views are ignored in this method.
 	 *
-	 * @return The adapter position of the first visible item or
-	 *         {@link RecyclerView#NO_POSITION} if there aren't any visible
+	 * @return The adapter position of the first visible item or {@link RecyclerView#NO_POSITION} if there aren't any visible
 	 *         items.
 	 * @see #findFirstCompletelyVisibleItemPosition()
 	 * @see #findLastVisibleItemPosition()
@@ -1387,15 +1443,14 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return findOneVisibleChild(0, getChildCount(), false);
 	}
 
+
 	/**
 	 * Returns the adapter position of the first fully visible view.
 	 * <p>
-	 * Note that bounds check is only performed in the current orientation. That
-	 * means, if LinearLayoutManager is horizontal, it will only check the
+	 * Note that bounds check is only performed in the current orientation. That means, if LinearLayoutManager is horizontal, it will only check the
 	 * view's left and right edges.
 	 *
-	 * @return The adapter position of the first fully visible item or
-	 *         {@link RecyclerView#NO_POSITION} if there aren't any visible
+	 * @return The adapter position of the first fully visible item or {@link RecyclerView#NO_POSITION} if there aren't any visible
 	 *         items.
 	 * @see #findFirstVisibleItemPosition()
 	 * @see #findLastCompletelyVisibleItemPosition()
@@ -1404,21 +1459,18 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return findOneVisibleChild(0, getChildCount(), true);
 	}
 
+
 	/**
 	 * Returns the adapter position of the last visible view.
 	 * <p>
-	 * Note that, this value is not affected by layout orientation or item order
-	 * traversal. ({@link #setReverseLayout(boolean)}). Views are sorted by
+	 * Note that, this value is not affected by layout orientation or item order traversal. ({@link #setReverseLayout(boolean)}). Views are sorted by
 	 * their positions in the adapter, not in the layout.
 	 * <p>
-	 * If RecyclerView has item decorators, they will be considered in
-	 * calculations as well.
+	 * If RecyclerView has item decorators, they will be considered in calculations as well.
 	 * <p>
-	 * LinearLayoutManager may pre-cache some views that are not necessarily
-	 * visible. Those views are ignored in this method.
+	 * LinearLayoutManager may pre-cache some views that are not necessarily visible. Those views are ignored in this method.
 	 *
-	 * @return The adapter position of the last visible view or
-	 *         {@link RecyclerView#NO_POSITION} if there aren't any visible
+	 * @return The adapter position of the last visible view or {@link RecyclerView#NO_POSITION} if there aren't any visible
 	 *         items.
 	 * @see #findLastCompletelyVisibleItemPosition()
 	 * @see #findFirstVisibleItemPosition()
@@ -1427,15 +1479,14 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		return findOneVisibleChild(getChildCount() - 1, -1, false);
 	}
 
+
 	/**
 	 * Returns the adapter position of the last fully visible view.
 	 * <p>
-	 * Note that bounds check is only performed in the current orientation. That
-	 * means, if LinearLayoutManager is horizontal, it will only check the
+	 * Note that bounds check is only performed in the current orientation. That means, if LinearLayoutManager is horizontal, it will only check the
 	 * view's left and right edges.
 	 *
-	 * @return The adapter position of the last fully visible view or
-	 *         {@link RecyclerView#NO_POSITION} if there aren't any visible
+	 * @return The adapter position of the last fully visible view or {@link RecyclerView#NO_POSITION} if there aren't any visible
 	 *         items.
 	 * @see #findLastVisibleItemPosition()
 	 * @see #findFirstCompletelyVisibleItemPosition()
@@ -1443,6 +1494,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 	public int findLastCompletelyVisibleItemPosition() {
 		return findOneVisibleChild(getChildCount() - 1, -1, true);
 	}
+
 
 	int findOneVisibleChild(int fromIndex, int toIndex, boolean completelyVisible) {
 		final int start = mOrientationHelper.getStartAfterPadding();
@@ -1457,13 +1509,15 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 					if (childStart >= start && childEnd <= end) {
 						return getPosition(child);
 					}
-				} else {
+				}
+				else {
 					return getPosition(child);
 				}
 			}
 		}
 		return RecyclerView.NO_POSITION;
 	}
+
 
 	@Override
 	public View onFocusSearchFailed(View focused, int focusDirection, RecyclerView.Recycler recycler,
@@ -1480,11 +1534,12 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		final View referenceChild;
 		if (layoutDir == RenderState.LAYOUT_START) {
 			referenceChild = getChildClosestToStart();
-		} else {
+		}
+		else {
 			referenceChild = getChildClosestToEnd();
 		}
 		ensureRenderState();
-		final int maxScroll = (int) (MAX_SCROLL_FACTOR * (mOrientationHelper.getEndAfterPadding() - mOrientationHelper
+		final int maxScroll = (int)(MAX_SCROLL_FACTOR * (mOrientationHelper.getEndAfterPadding() - mOrientationHelper
 				.getStartAfterPadding()));
 		updateRenderState(layoutDir, maxScroll, false, state);
 		mRenderState.mScrollingOffset = RenderState.SCOLLING_OFFSET_NaN;
@@ -1492,7 +1547,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		final View nextFocus;
 		if (layoutDir == RenderState.LAYOUT_START) {
 			nextFocus = getChildClosestToStart();
-		} else {
+		}
+		else {
 			nextFocus = getChildClosestToEnd();
 		}
 		if (nextFocus == referenceChild || !nextFocus.isFocusable()) {
@@ -1500,6 +1556,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		}
 		return nextFocus;
 	}
+
 
 	/**
 	 * Used for debugging. Logs the internal representation of children to
@@ -1513,6 +1570,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		}
 		Log.d(TAG, "==============");
 	}
+
 
 	/**
 	 * Used for debugging. Validates that child views are laid out in correct
@@ -1546,7 +1604,8 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 					throw new RuntimeException("detected invalid location");
 				}
 			}
-		} else {
+		}
+		else {
 			for (int i = 1; i < getChildCount(); i++) {
 				View child = getChildAt(i);
 				int pos = getPosition(child);
@@ -1562,6 +1621,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			}
 		}
 	}
+
 
 	private void updatePositionForInsert() {
 
@@ -1580,6 +1640,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
 	}
 
+
 	@Override
 	public boolean supportsPredictiveItemAnimations() {
 		return true;
@@ -1591,53 +1652,52 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 	 */
 	private static class RenderState {
 
-		final static String TAG = "LinearLayoutManager#RenderState";
+		final static String				TAG					= "LinearLayoutManager#RenderState";
 
-		final static int LAYOUT_START = -1;
+		final static int				LAYOUT_START		= -1;
 
-		final static int LAYOUT_END = 1;
+		final static int				LAYOUT_END			= 1;
 
-		final static int INVALID_LAYOUT = Integer.MIN_VALUE;
+		final static int				INVALID_LAYOUT		= Integer.MIN_VALUE;
 
-		final static int ITEM_DIRECTION_HEAD = -1;
+		final static int				ITEM_DIRECTION_HEAD	= -1;
 
-		final static int ITEM_DIRECTION_TAIL = 1;
+		final static int				ITEM_DIRECTION_TAIL	= 1;
 
-		final static int SCOLLING_OFFSET_NaN = Integer.MIN_VALUE;
+		final static int				SCOLLING_OFFSET_NaN	= Integer.MIN_VALUE;
 
 		/**
 		 * Pixel offset where rendering should start
 		 */
-		int mOffset;
+		int								mOffset;
 
 		/**
 		 * Number of pixels that we should fill, in the layout direction.
 		 */
-		int mAvailable;
+		int								mAvailable;
 
 		/**
 		 * Current position on the adapter to get the next item.
 		 */
-		int mCurrentPosition;
+		int								mCurrentPosition;
 
 		/**
 		 * Defines the direction in which the data adapter is traversed. Should
 		 * be {@link #ITEM_DIRECTION_HEAD} or {@link #ITEM_DIRECTION_TAIL}
 		 */
-		int mItemDirection;
+		int								mItemDirection;
 
 		/**
-		 * Defines the direction in which the layout is filled. Should be
-		 * {@link #LAYOUT_START} or {@link #LAYOUT_END}
+		 * Defines the direction in which the layout is filled. Should be {@link #LAYOUT_START} or {@link #LAYOUT_END}
 		 */
-		int mLayoutDirection;
+		int								mLayoutDirection;
 
 		/**
 		 * Used when RenderState is constructed in a scrolling state. It should
 		 * be set the amount of scrolling we can make without creating a new
 		 * view. Settings this is required for efficient view recycling.
 		 */
-		int mScrollingOffset;
+		int								mScrollingOffset;
 
 		/**
 		 * Used if you want to pre-layout items that are not yet visible. The
@@ -1645,14 +1705,15 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		 * rendered for {@link #mExtra} is not considered to avoid recycling
 		 * visible children.
 		 */
-		int mExtra = 0;
+		int								mExtra				= 0;
 
 		/**
 		 * When LLM needs to layout particular views, it sets this list in which
 		 * case, RenderState will only return views from this list and return
 		 * null if it cannot find an item.
 		 */
-		List<RecyclerView.ViewHolder> mScrapList = null;
+		List<RecyclerView.ViewHolder>	mScrapList			= null;
+
 
 		/**
 		 * @return true if there are more items in the data adapter
@@ -1661,10 +1722,10 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			return mCurrentPosition >= 0 && mCurrentPosition < state.getItemCount();
 		}
 
+
 		/**
 		 * Gets the view for the next element that we should render. Also
-		 * updates current item index to the next item, based on
-		 * {@link #mItemDirection}
+		 * updates current item index to the next item, based on {@link #mItemDirection}
 		 *
 		 * @return The next element that we should render.
 		 */
@@ -1677,11 +1738,11 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			return view;
 		}
 
+
 		/**
 		 * Returns next item from limited list.
 		 * <p>
-		 * Upon finding a valid VH, sets current item position to
-		 * VH.itemPosition + mItemDirection
+		 * Upon finding a valid VH, sets current item position to VH.itemPosition + mItemDirection
 		 *
 		 * @return View if an item in the current position or direction exists
 		 *         if not null.
@@ -1716,46 +1777,55 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
 	}
 
+
 	OrientationHelper createVerticalOrientationHelper() {
 		return new OrientationHelper() {
+
 			@Override
 			public int getEndAfterPadding() {
 				return getHeight() - getPaddingBottom();
 			}
+
 
 			@Override
 			public void offsetChildren(int amount) {
 				offsetChildrenVertical(amount);
 			}
 
+
 			@Override
 			public int getStartAfterPadding() {
 				return getPaddingTop();
 			}
 
+
 			@Override
 			public int getDecoratedMeasurement(View view) {
-				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
+				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams)view.getLayoutParams();
 				return getDecoratedMeasuredHeight(view) + params.topMargin + params.bottomMargin;
 			}
 
+
 			@Override
 			public int getDecoratedMeasurementInOther(View view) {
-				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
+				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams)view.getLayoutParams();
 				return getDecoratedMeasuredWidth(view) + params.leftMargin + params.rightMargin;
 			}
 
+
 			@Override
 			public int getDecoratedEnd(View view) {
-				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
+				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams)view.getLayoutParams();
 				return getDecoratedBottom(view) + params.bottomMargin;
 			}
 
+
 			@Override
 			public int getDecoratedStart(View view) {
-				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
+				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams)view.getLayoutParams();
 				return getDecoratedTop(view) - params.topMargin;
 			}
+
 
 			@Override
 			public int getTotalSpace() {
@@ -1764,46 +1834,55 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		};
 	}
 
+
 	OrientationHelper createHorizontalOrientationHelper() {
 		return new OrientationHelper() {
+
 			@Override
 			public int getEndAfterPadding() {
 				return getWidth() - getPaddingRight();
 			}
+
 
 			@Override
 			public void offsetChildren(int amount) {
 				offsetChildrenHorizontal(amount);
 			}
 
+
 			@Override
 			public int getStartAfterPadding() {
 				return getPaddingLeft();
 			}
 
+
 			@Override
 			public int getDecoratedMeasurement(View view) {
-				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
+				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams)view.getLayoutParams();
 				return getDecoratedMeasuredWidth(view) + params.leftMargin + params.rightMargin;
 			}
 
+
 			@Override
 			public int getDecoratedMeasurementInOther(View view) {
-				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
+				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams)view.getLayoutParams();
 				return getDecoratedMeasuredHeight(view) + params.topMargin + params.bottomMargin;
 			}
 
+
 			@Override
 			public int getDecoratedEnd(View view) {
-				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
+				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams)view.getLayoutParams();
 				return getDecoratedRight(view) + params.rightMargin;
 			}
 
+
 			@Override
 			public int getDecoratedStart(View view) {
-				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
+				final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams)view.getLayoutParams();
 				return getDecoratedLeft(view) - params.leftMargin;
 			}
+
 
 			@Override
 			public int getTotalSpace() {
@@ -1812,17 +1891,21 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		};
 	}
 
+
 	public int getPositionForInsert() {
 		return mPositionForInsert;
 	}
+
 
 	public void setOnLappingItemListener(OnLappingItemListener pOnLappingItemListener) {
 		mOnLappingItemListener = pOnLappingItemListener;
 	}
 
+
 	private int getmOffsetForSmoothController() {
 		return mOffsetForSmoothController;
 	}
+
 
 	private void setOffsetForSmoothController(int pOffsetForSmoothController) {
 		mOffsetForSmoothController = pOffsetForSmoothController;
@@ -1841,6 +1924,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		 */
 		int getDecoratedStart(View view);
 
+
 		/**
 		 * @param view
 		 *            The view element to check
@@ -1849,12 +1933,14 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		 */
 		int getDecoratedEnd(View view);
 
+
 		/**
 		 * @param view
 		 *            The view element to check
 		 * @return Total space occupied by this view
 		 */
 		int getDecoratedMeasurement(View view);
+
 
 		/**
 		 * @param view
@@ -1864,15 +1950,18 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		 */
 		int getDecoratedMeasurementInOther(View view);
 
+
 		/**
 		 * @return The very first pixel we can draw.
 		 */
 		int getStartAfterPadding();
 
+
 		/**
 		 * @return The last pixel we can draw
 		 */
 		int getEndAfterPadding();
+
 
 		/**
 		 * Offsets all children's positions by the given amount
@@ -1881,6 +1970,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 		 *            Value to add to each child's layout parameters
 		 */
 		void offsetChildren(int amount);
+
 
 		/**
 		 * Returns the total space to layout.
@@ -1892,21 +1982,23 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
 	static class SavedState implements Parcelable {
 
-		int mOrientation;
+		int		mOrientation;
 
-		int mAnchorPosition;
+		int		mAnchorPosition;
 
-		int mAnchorOffset;
+		int		mAnchorOffset;
 
-		boolean mReverseLayout;
+		boolean	mReverseLayout;
 
-		boolean mStackFromEnd;
+		boolean	mStackFromEnd;
 
-		boolean mAnchorLayoutFromEnd;
+		boolean	mAnchorLayoutFromEnd;
+
 
 		public SavedState() {
 
 		}
+
 
 		SavedState(Parcel in) {
 			mOrientation = in.readInt();
@@ -1917,6 +2009,7 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			mAnchorLayoutFromEnd = in.readInt() == 1;
 		}
 
+
 		public SavedState(SavedState other) {
 			mOrientation = other.mOrientation;
 			mAnchorPosition = other.mAnchorPosition;
@@ -1926,10 +2019,12 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			mAnchorLayoutFromEnd = other.mAnchorLayoutFromEnd;
 		}
 
+
 		@Override
 		public int describeContents() {
 			return 0;
 		}
+
 
 		@Override
 		public void writeToParcel(Parcel dest, int flags) {
@@ -1941,16 +2036,18 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 			dest.writeInt(mAnchorLayoutFromEnd ? 1 : 0);
 		}
 
-		public static final Parcelable.Creator<SavedState> CREATOR = new Parcelable.Creator<SavedState>() {
-			@Override
-			public SavedState createFromParcel(Parcel in) {
-				return new SavedState(in);
-			}
+		public static final Parcelable.Creator<SavedState>	CREATOR	= new Parcelable.Creator<SavedState>() {
 
-			@Override
-			public SavedState[] newArray(int size) {
-				return new SavedState[size];
-			}
-		};
+																		@Override
+																		public SavedState createFromParcel(Parcel in) {
+																			return new SavedState(in);
+																		}
+
+
+																		@Override
+																		public SavedState[] newArray(int size) {
+																			return new SavedState[size];
+																		}
+																	};
 	}
 }

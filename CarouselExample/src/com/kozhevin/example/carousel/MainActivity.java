@@ -22,32 +22,27 @@ import com.kozhevin.example.carousel.listeners.OnRecyclerViewItemClickListener;
 
 public class MainActivity extends Activity {
 
-	private static final int ITEM_COUNT = 4;
+	private static final int						ITEM_COUNT			= 4;
 
+	private final float								TRANSLATION_VALUE_X	= -1400f;
 
-	private final float TRANSLATION_VALUE_X = -1400f;
-	
-	
-	private RecyclerAdapter mAdapter;
-	private List<ViewModel> mListModel;
-	private CarouselLayoutManager mLinearLayoutManager;
-	private AddedItemListener mAddedItemListener;
-	private RecyclerView mRecyclerView;
-	private WrapperRecyclerViewAdapter<ViewHolder> mWrapperRecyclerViewAdapter;
+	private RecyclerAdapter							mAdapter;
+	private List<ViewModel>							mListModel;
+	private CarouselLayoutManager					mLinearLayoutManager;
+	private AddedItemListener						mAddedItemListener;
+	private RecyclerView							mRecyclerView;
+	private WrapperRecyclerViewAdapter<ViewHolder>	mWrapperRecyclerViewAdapter;
 
+	private DeletedItemListener						mDeletedItemListener;
 
-	private DeletedItemListener mDeletedItemListener;
-
-
-	private OnLappingItemListener mOnLappingItemListener;
-
+	private OnLappingItemListener					mOnLappingItemListener;
 
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		mRecyclerView = (RecyclerView) findViewById(R.id.list);
+		mRecyclerView = (RecyclerView)findViewById(R.id.list);
 
 		mRecyclerView.setHasFixedSize(false);
 		mListModel = createMockList();
@@ -57,23 +52,23 @@ public class MainActivity extends Activity {
 		mAddedItemListener = new AddedItemListener();
 		mAddedItemListener.setOffset(mWrapperRecyclerViewAdapter.getOffsetPositionForAnimations());
 		mAddedItemListener.setWrapperRecyclerViewAdapter(mWrapperRecyclerViewAdapter);
-		
+
 		mDeletedItemListener = new DeletedItemListener();
 		mDeletedItemListener.setOffset(mWrapperRecyclerViewAdapter.getOffsetPositionForAnimations());
 		mDeletedItemListener.setWrapperRecyclerViewAdapter(mWrapperRecyclerViewAdapter);
-		
+
 		mAdapter.setOnAddedItemListener(mAddedItemListener);
 		mAdapter.setOnDeletedItemListener(mDeletedItemListener);
-		
+
 		mRecyclerView.setAdapter(mWrapperRecyclerViewAdapter);
-		mLinearLayoutManager = new CarouselLayoutManager(this, LinearLayout.HORIZONTAL, false);
+		mLinearLayoutManager = new CarouselLayoutManager(LinearLayout.HORIZONTAL, false);
 		mLinearLayoutManager.supportsPredictiveItemAnimations();
 		mRecyclerView.setLayoutManager(mLinearLayoutManager);
 		CarouselItemAnimator lDefaultItemAnimator = new CarouselItemAnimator();
-		//TODO need determine a translation of X value 
+		// TODO need determine a translation of X value
 		lDefaultItemAnimator.setTranslationValueY(TRANSLATION_VALUE_X);
 		mRecyclerView.setItemAnimator(lDefaultItemAnimator);
-		
+
 		mAdapter.setOnItemClickListener(new OnRecyclerViewItemClickListener<ViewModel>() {
 
 			@Override
@@ -84,7 +79,7 @@ public class MainActivity extends Activity {
 			}
 		});
 
-		Button lMagicButton = (Button) findViewById(R.id.button1);
+		Button lMagicButton = (Button)findViewById(R.id.button1);
 		lMagicButton.setOnClickListener(new OnClickListener() {
 
 			@Override
@@ -95,8 +90,7 @@ public class MainActivity extends Activity {
 				mListModel.add(new ViewModel(lcount, "Item " + (lcount + 1), null));
 				mAdapter.notifyDataSetChanged();
 				mWrapperRecyclerViewAdapter.notifyDataSetChanged();
-				
-				
+
 			}
 		});
 		mOnLappingItemListener = new OnLappingItemListener(mRecyclerView, mLinearLayoutManager);
@@ -104,8 +98,9 @@ public class MainActivity extends Activity {
 		if (mWrapperRecyclerViewAdapter.getItemCount() > 2) {
 			mOnLappingItemListener.onItemLapping(2);
 		}
-		
+
 	}
+
 
 	private List<ViewModel> createMockList() {
 		List<ViewModel> items = new ArrayList<ViewModel>();

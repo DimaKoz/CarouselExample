@@ -1,6 +1,5 @@
 package com.kozhevin.example.carousel.adapters;
 
-
 import java.util.List;
 
 import android.support.v7.widget.RecyclerView;
@@ -22,8 +21,9 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHo
 	private OnRecyclerViewItemClickListener<ViewModel>	mItemClickListener;
 	private int											mItemLayout;
 
-	private OnAddedItemListener mOnAddedItemListener;
-	private OnDeletedItemListener mOnDeletedItemListener;
+	private OnAddedItemListener							mOnAddedItemListener;
+	private OnDeletedItemListener						mOnDeletedItemListener;
+
 
 	public RecyclerAdapter(List<ViewModel> items, int itemLayout) {
 		mItems = items;
@@ -57,8 +57,8 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHo
 			pHolder.image.setImageResource(R.drawable.item4);
 		}
 		pHolder.itemView.setTag(item);
-		pHolder.itemView.setTag(R.string.app_name,pPosition);
-		
+		pHolder.itemView.setTag(R.string.app_name, pPosition);
+
 	}
 
 
@@ -79,8 +79,8 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHo
 
 	public void add(ViewModel pItem, int pPosition) {
 		mItems.add(pPosition, pItem);
-		//FIXME move to listener
-		//notifyItemInserted(pPosition + 1);
+		// FIXME move to listener
+		// notifyItemInserted(pPosition + 1);
 
 		if (mOnAddedItemListener != null) {
 			mOnAddedItemListener.onItemAdded(pPosition);
@@ -91,7 +91,7 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHo
 	public void remove(ViewModel pItem) {
 		int lPosition = mItems.indexOf(pItem);
 		mItems.remove(lPosition);
-		//FIXME move to listener
+		// FIXME move to listener
 		// notifyItemRemoved(lPosition+1);
 		if (mOnDeletedItemListener != null) {
 			mOnDeletedItemListener.onItemDeleted(lPosition);
@@ -123,7 +123,6 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHo
 		mOnAddedItemListener = pOnAddedItemListener;
 	}
 
-
 	public static class ViewHolder extends RecyclerView.ViewHolder {
 
 		public ImageView	image;
@@ -137,6 +136,4 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHo
 		}
 	}
 
-
-	
 }

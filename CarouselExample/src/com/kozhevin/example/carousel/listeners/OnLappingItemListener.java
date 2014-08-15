@@ -6,21 +6,23 @@ import android.util.Log;
 
 import com.kozhevin.example.carousel.CarouselLayoutManager;
 
-
 public class OnLappingItemListener implements IOnLappingItemListener {
-	private static final String TAG = "OnLappingItemListener";
 
-	private CarouselLayoutManager mCarouselLayoutManager;
-	private RecyclerView mRecyclerView;
+	private static final String		TAG	= "OnLappingItemListener";
+
+	private CarouselLayoutManager	mCarouselLayoutManager;
+	private RecyclerView			mRecyclerView;
+
 
 	@SuppressWarnings("unused")
-	private OnLappingItemListener() {
-	};
+	private OnLappingItemListener() {};
+
 
 	public OnLappingItemListener(RecyclerView pRecyclerView, CarouselLayoutManager pCarouselLayoutManager) {
 		mRecyclerView = pRecyclerView;
 		mCarouselLayoutManager = pCarouselLayoutManager;
 	}
+
 
 	@Override
 	public void onItemLapping(final int pPositionForLapping) {
@@ -41,22 +43,22 @@ public class OnLappingItemListener implements IOnLappingItemListener {
 
 			@Override
 			public void run() {
-				
+
 				try {
 					for (int i = 0; i < 10; ++i) {
-					if (ThreadHolder.getThread().isInterrupted()) {
-						return;
+						if (ThreadHolder.getThread().isInterrupted()) {
+							return;
+						}
+						Thread.sleep(50);
 					}
-					Thread.sleep(50);
-					}
-				} catch (InterruptedException e) {
+				}catch(InterruptedException e) {
 
 					e.printStackTrace();
 				}
 				if (ThreadHolder.getThread().isInterrupted()) {
 					return;
 				}
-				
+
 				Log.d(TAG, this.toString() + " trying scroll to: " + pPositionForLapping);
 				if (mCarouselLayoutManager != null) {
 					mCarouselLayoutManager.smoothScrollToPosition(mRecyclerView, new State(), pPositionForLapping);
@@ -69,15 +71,18 @@ public class OnLappingItemListener implements IOnLappingItemListener {
 
 	private static class ThreadHolder {
 
-		private static Thread mThread;
+		private static Thread	mThread;
+
 
 		public static Thread getThread() {
 			return mThread;
 		}
 
+
 		public static void setThread(Thread pThread) {
 			mThread = pThread;
 		}
+
 
 		public static void finishTread() {
 			if (mThread != null && mThread.getState() != Thread.State.TERMINATED) {

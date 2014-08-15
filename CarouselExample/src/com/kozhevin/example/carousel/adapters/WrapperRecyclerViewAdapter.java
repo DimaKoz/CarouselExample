@@ -1,6 +1,5 @@
 package com.kozhevin.example.carousel.adapters;
 
-
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.RecyclerView.Adapter;
 import android.support.v7.widget.RecyclerView.AdapterDataObserver;
@@ -12,65 +11,85 @@ import android.view.ViewGroup;
 
 import com.kozhevin.example.carousel.R;
 
-
 public class WrapperRecyclerViewAdapter<T extends ViewHolder> extends RecyclerView.Adapter<ViewHolder> {
 
-	private final static String TAG = "WrapperRecyclerViewAdapter";
+	private final static String		TAG						= "WrapperRecyclerViewAdapter";
 
-	private static final boolean DEBUG = false;
+	private static final boolean	DEBUG					= false;
 
-	private final static int TYPE_WRAPPER_START = 0;
-	private final static int TYPE_WRAPPER_FINISH = 2;
-	private final static int TYPE_WRAPPERED = 1;
-	
-	private final static int OFFSET_WITH_START_ITEM = 1;
-	private final static int OFFSET_FULL = 2;
+	private final static int		TYPE_WRAPPER_START		= 0;
+	private final static int		TYPE_WRAPPER_FINISH		= 2;
+	private final static int		TYPE_WRAPPED			= 1;
 
-	RecyclerView.Adapter<T> mAdaper;
+	private final static int		OFFSET_WITH_START_ITEM	= 1;
+	private final static int		OFFSET_FULL				= 2;
+
+	private RecyclerView.Adapter<T>	mAdapter;
+	private AdapterDataObserver		mInternalObserver;
+
 
 	public WrapperRecyclerViewAdapter() {
+		mInternalObserver = new AdapterDataObserver() {
 
+			@Override
+			public void onChanged() {
+				notifyDataSetChanged();
+				if (DEBUG) {
+					Log.v("Carousel", "Wrapper onChanged");
+				}
+			}
+
+
+			@Override
+			public void onItemRangeChanged(int positionStart, int itemCount) {
+				notifyItemRangeChanged(positionStart + getOffsetPositionForAnimations(), itemCount);
+			}
+
+
+			@Override
+			public void onItemRangeInserted(int positionStart, int itemCount) {
+				notifyItemRangeInserted(positionStart + getOffsetPositionForAnimations(), itemCount);
+			}
+
+
+			@Override
+			public void onItemRangeRemoved(int positionStart, int itemCount) {
+				notifyItemRangeRemoved(positionStart + getOffsetPositionForAnimations(), itemCount);
+				if (DEBUG) {
+					Log.v("Carousel", "Wrapper removed: posFromWrapped = " + positionStart + ", mypos = "
+							+ (positionStart + getOffsetPositionForAnimations()) + ", itemCount = " + itemCount);
+				}
+			}
+		};
 	}
+
 
 	@SuppressWarnings("unchecked")
 	public void setAdaper(Adapter<? extends ViewHolder> pAdapter) {
-		mAdaper = (Adapter<T>) pAdapter;
+		if (mAdapter != null) {
+			mAdapter.unregisterAdapterDataObserver(mInternalObserver);
+		}
+		mAdapter = (Adapter<T>)pAdapter;
+		mAdapter.registerAdapterDataObserver(mInternalObserver);
 	}
 
-	@Override
-	public void registerAdapterDataObserver(AdapterDataObserver pObserver) {
-		
-		if (mAdaper != null) {
-			mAdaper.registerAdapterDataObserver(pObserver);
-		}
-		
-	}
-
-	@Override
-	public void unregisterAdapterDataObserver(AdapterDataObserver pObserver) {
-		
-		if (mAdaper != null) {
-			mAdaper.unregisterAdapterDataObserver(pObserver);
-		}
-		
-	}
 
 	@Override
 	public int getItemCount() {
-		
-		return mAdaper.getItemCount() + OFFSET_FULL;
-		
+		return mAdapter.getItemCount() + OFFSET_FULL;
 	}
+
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public void onBindViewHolder(ViewHolder pHolder, int pPosition) {
-		
-		if (getItemViewType(pPosition) == TYPE_WRAPPERED) {
-			mAdaper.onBindViewHolder((T) pHolder, pPosition - OFFSET_WITH_START_ITEM);
+
+		if (getItemViewType(pPosition) == TYPE_WRAPPED) {
+			mAdapter.onBindViewHolder((T)pHolder, pPosition - OFFSET_WITH_START_ITEM);
 		}
-		
+
 	}
+
 
 	@Override
 	public ViewHolder onCreateViewHolder(ViewGroup pHolder, int pType) {
@@ -90,14 +109,15 @@ public class WrapperRecyclerViewAdapter<T extends ViewHolder> extends RecyclerVi
 			return new WrapperViewHolderFinish(v);
 		}
 
-		return mAdaper.onCreateViewHolder(pHolder, pType);
+		return mAdapter.onCreateViewHolder(pHolder, pType);
 
 	}
+
 
 	@Override
 	public int getItemViewType(int pPosition) {
 
-		if (pPosition == (mAdaper.getItemCount() + OFFSET_WITH_START_ITEM)) {
+		if (pPosition == (mAdapter.getItemCount() + OFFSET_WITH_START_ITEM)) {
 			return TYPE_WRAPPER_FINISH;
 		}
 
@@ -105,7 +125,7 @@ public class WrapperRecyclerViewAdapter<T extends ViewHolder> extends RecyclerVi
 			return TYPE_WRAPPER_START;
 		}
 
-		return TYPE_WRAPPERED;
+		return TYPE_WRAPPED;
 
 	}
 
@@ -114,7 +134,7 @@ public class WrapperRecyclerViewAdapter<T extends ViewHolder> extends RecyclerVi
 		public WrapperViewHolderStart(View itemView) {
 			super(itemView);
 		}
-		
+
 	}
 
 	public static class WrapperViewHolderFinish extends RecyclerView.ViewHolder {
@@ -125,10 +145,12 @@ public class WrapperRecyclerViewAdapter<T extends ViewHolder> extends RecyclerVi
 
 	}
 
+
 	@Override
 	public long getItemId(int pPosition) {
 		return super.getItemId(pPosition);
 	}
+
 
 	@Override
 	public void setHasStableIds(boolean pHasStableIds) {
@@ -139,8 +161,9 @@ public class WrapperRecyclerViewAdapter<T extends ViewHolder> extends RecyclerVi
 	public int getOffsetPositionForAnimations() {
 		return OFFSET_WITH_START_ITEM;
 	}
-	
+
+
 	public RecyclerView.Adapter<T> getAdaper() {
-		return mAdaper;
+		return mAdapter;
 	}
 }
