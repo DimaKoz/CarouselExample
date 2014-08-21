@@ -6,78 +6,80 @@ import java.util.List;
 import android.app.Activity;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.RecyclerView.ViewHolder;
+import android.support.v7.widget.RecyclerView.State;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
-import com.kozhevin.example.carousel.adapters.RecyclerAdapter;
+import com.kozhevin.example.carousel.adapters.CarouselAdapter;
 import com.kozhevin.example.carousel.adapters.WrapperRecyclerViewAdapter;
-import com.kozhevin.example.carousel.listeners.AddedItemListener;
-import com.kozhevin.example.carousel.listeners.DeletedItemListener;
 import com.kozhevin.example.carousel.listeners.OnLappingItemListener;
-import com.kozhevin.example.carousel.listeners.OnRecyclerViewItemClickListener;
+import com.kozhevin.example.carousel.swipedismiss.SwipeDismissRecyclerViewTouchListener;
 
 public class MainActivity extends Activity {
 
-	private static final int						ITEM_COUNT			= 4;
+	private static final String								LOG_TAG				= "MainActivity";
 
-	private final float								TRANSLATION_VALUE_X	= -1400f;
+	private static final int								ITEM_COUNT			= 5;
 
-	private RecyclerAdapter							mAdapter;
-	private List<ViewModel>							mListModel;
-	private CarouselLayoutManager					mLinearLayoutManager;
-	private AddedItemListener						mAddedItemListener;
-	private RecyclerView							mRecyclerView;
-	private WrapperRecyclerViewAdapter<ViewHolder>	mWrapperRecyclerViewAdapter;
+	private final float										TRANSLATION_VALUE_X	= -1400f;
 
-	private DeletedItemListener						mDeletedItemListener;
+	private CarouselAdapter									mAdapter;
+	private List<ViewModel>									mListModel;
+	private CarouselRecyclerView							mRecyclerView;
+	private WrapperRecyclerViewAdapter<CarouselViewHolder>	mWrapperRecyclerViewAdapter;
 
-	private OnLappingItemListener					mOnLappingItemListener;
+	private OnLappingItemListener							mOnLappingItemListener;
+
+	private CarouselLayoutManager							mLinearLayoutManager;
+
+	private CarouselItemAnimator							mDefaultItemAnimator;
 
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		mRecyclerView = (RecyclerView)findViewById(R.id.list);
+		mRecyclerView = (CarouselRecyclerView)findViewById(R.id.list);
 
 		mRecyclerView.setHasFixedSize(false);
 		mListModel = createMockList();
-		mAdapter = new RecyclerAdapter(mListModel, R.layout.item);
-		mWrapperRecyclerViewAdapter = new WrapperRecyclerViewAdapter<RecyclerView.ViewHolder>();
+		mAdapter = new CarouselAdapter(this);
+		mAdapter.setData(mListModel);
+		mWrapperRecyclerViewAdapter = new WrapperRecyclerViewAdapter<CarouselViewHolder>();
 		mWrapperRecyclerViewAdapter.setAdaper(mAdapter);
-		mAddedItemListener = new AddedItemListener();
-		mAddedItemListener.setOffset(mWrapperRecyclerViewAdapter.getOffsetPositionForAnimations());
-		mAddedItemListener.setWrapperRecyclerViewAdapter(mWrapperRecyclerViewAdapter);
-
-		mDeletedItemListener = new DeletedItemListener();
-		mDeletedItemListener.setOffset(mWrapperRecyclerViewAdapter.getOffsetPositionForAnimations());
-		mDeletedItemListener.setWrapperRecyclerViewAdapter(mWrapperRecyclerViewAdapter);
-
-		mAdapter.setOnAddedItemListener(mAddedItemListener);
-		mAdapter.setOnDeletedItemListener(mDeletedItemListener);
-
+		mAdapter.setPositionOffset(-mWrapperRecyclerViewAdapter.getOffsetPositionForAnimations());
 		mRecyclerView.setAdapter(mWrapperRecyclerViewAdapter);
+
 		mLinearLayoutManager = new CarouselLayoutManager(LinearLayout.HORIZONTAL, false);
 		mLinearLayoutManager.supportsPredictiveItemAnimations();
 		mRecyclerView.setLayoutManager(mLinearLayoutManager);
-		CarouselItemAnimator lDefaultItemAnimator = new CarouselItemAnimator();
-		// TODO need determine a translation of X value
-		lDefaultItemAnimator.setTranslationValueY(TRANSLATION_VALUE_X);
-		mRecyclerView.setItemAnimator(lDefaultItemAnimator);
+		mDefaultItemAnimator = new CarouselItemAnimator();
+		mDefaultItemAnimator.setTranslationValueY(TRANSLATION_VALUE_X);
+		mRecyclerView.setItemAnimator(mDefaultItemAnimator);
 
-		mAdapter.setOnItemClickListener(new OnRecyclerViewItemClickListener<ViewModel>() {
+		mAdapter.setOnItemClickListener(new CarouselAdapter.OnCarouselItemClickListener() {
 
 			@Override
-			public void onItemClick(View view, ViewModel viewModel) {
-				mAdapter.remove(viewModel);
-				mWrapperRecyclerViewAdapter.notifyDataSetChanged();
+			public void onImageClick(int position) {
+				mAdapter.showRemoveItemAnimation(position);
+				mListModel.remove(position);
 
 			}
+
+
+			@Override
+			public void onDeleteButtonClick(int position) {
+				mAdapter.showRemoveItemAnimation(position);
+				mListModel.remove(position);
+			}
 		});
+
+		// TODO need determine a translation of X value
+		mDefaultItemAnimator.setTranslationValueY(TRANSLATION_VALUE_X);
+		mRecyclerView.setItemAnimator(mDefaultItemAnimator);
 
 		Button lMagicButton = (Button)findViewById(R.id.button1);
 		lMagicButton.setOnClickListener(new OnClickListener() {
@@ -93,12 +95,16 @@ public class MainActivity extends Activity {
 
 			}
 		});
+
 		mOnLappingItemListener = new OnLappingItemListener(mRecyclerView, mLinearLayoutManager);
+
 		mLinearLayoutManager.setOnLappingItemListener(mOnLappingItemListener);
-		if (mWrapperRecyclerViewAdapter.getItemCount() > 2) {
-			mOnLappingItemListener.onItemLapping(2);
+		if (mWrapperRecyclerViewAdapter.getItemCount() > 1) {
+			mOnLappingItemListener.onItemLapping(1);
 		}
 
+		mLinearLayoutManager.smoothScrollToPosition(mRecyclerView, new State(), 1);
+		initSwipe();
 	}
 
 
@@ -110,4 +116,48 @@ public class MainActivity extends Activity {
 		return items;
 	}
 
+
+	private void initSwipe() {
+		SwipeDismissRecyclerViewTouchListener touchListener = new SwipeDismissRecyclerViewTouchListener(
+				mRecyclerView,
+				new SwipeDismissRecyclerViewTouchListener.DismissCallbacks() {
+
+					@Override
+					public boolean canDismiss(int position) {
+						if (mWrapperRecyclerViewAdapter != null) {
+							if (position == 0 || ((position + 1) == mWrapperRecyclerViewAdapter.getItemCount())) {
+								return false;
+							}
+						}
+
+						return true;
+					}
+
+
+					@Override
+					public void onDismiss(RecyclerView pListView, int[] pReverseSortedPositions) {
+						for (int position : pReverseSortedPositions) {
+
+							Log.v(LOG_TAG, "position removed =" + (position - 1));
+							if (position == 0) {
+								return;
+							}
+							mListModel.remove(position - 1);
+							mDefaultItemAnimator.setIsUseTranslationAnimation(false);
+							mAdapter.notifyItemRemoved(position - 1);
+
+						}
+					}
+				});
+
+		mRecyclerView.setOnTouchListener(touchListener);
+		mRecyclerView.setOnHoverListener(touchListener);
+		mRecyclerView.addOnItemTouchListener(touchListener);
+
+		// Setting this scroll listener is required to ensure that during
+		// ReciclerView scrolling,
+		// we don't look for swipes.
+		mRecyclerView.setOnScrollListener(touchListener.makeScrollListener());
+
+	}
 }

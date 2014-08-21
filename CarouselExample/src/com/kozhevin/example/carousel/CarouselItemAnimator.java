@@ -45,6 +45,7 @@ public class CarouselItemAnimator extends RecyclerView.ItemAnimator {
 	private ArrayList<ViewHolder>	mRemoveAnimations	= new ArrayList<ViewHolder>();
 
 	private float					mTranslationValueY;
+	private volatile boolean		mIsUseTranslationAnimation;
 
 	private static class MoveInfo {
 
@@ -133,7 +134,7 @@ public class CarouselItemAnimator extends RecyclerView.ItemAnimator {
 	private void animateRemoveImpl(final ViewHolder pHolder) {
 		final View view = pHolder.itemView;
 		ViewCompat.animate(view).cancel();
-		if (getTranslationValueY() != 0) {
+		if (getTranslationValueY() != 0 && mIsUseTranslationAnimation) {
 			ViewPropertyAnimatorCompat lViewPropertyAnimatorCompat = ViewCompat.animate(view);
 			lViewPropertyAnimatorCompat.setDuration(350);
 			lViewPropertyAnimatorCompat.translationY(getTranslationValueY());
@@ -141,48 +142,58 @@ public class CarouselItemAnimator extends RecyclerView.ItemAnimator {
 
 				@Override
 				public void onAnimationStart(View arg0) {
-					// TODO Auto-generated method stub
-
 				}
 
 
 				@Override
 				public void onAnimationEnd(View arg0) {
-					// TODO Auto-generated method stub
 					animateAlhaRemove(view, pHolder);
 				}
 
 
 				@Override
 				public void onAnimationCancel(View arg0) {
-					// TODO Auto-generated method stub
-
 				}
 			});
 			ViewCompat.animate(view).start();
 		}
 		else {
+			if (mIsUseTranslationAnimation) {
+				view.setAlpha(0f);
+				mIsUseTranslationAnimation = true;
+			}
 			animateAlhaRemove(view, pHolder);
+			
 		}
 		mRemoveAnimations.add(pHolder);
 	}
 
 
 	private void animateAlhaRemove(final View pView, final ViewHolder pHolder) {
-		ViewCompat.animate(pView).setDuration(getRemoveDuration()).alpha(0).setListener(new VpaListenerAdapter() {
+		if (pView.getAlpha() > 0.8f) {
+			ViewCompat.animate(pView).setDuration(getRemoveDuration()).alpha(0).setListener(new VpaListenerAdapter() {
 
-			@Override
-			public void onAnimationEnd(View pView) {
-				ViewCompat.setAlpha(pView, 1);
-				dispatchRemoveFinished(pHolder);
-				mRemoveAnimations.remove(pHolder);
-				dispatchFinishedWhenDone();
-			}
-		}).start();
+				@Override
+				public void onAnimationEnd(View pView) {
+					afterAnimatedAlfaRemove(pView,  pHolder); 
+				}
+			}).start();
+		}
+		else {
+			afterAnimatedAlfaRemove(pView,  pHolder); 
+		}
 
 	}
 
 
+	private void afterAnimatedAlfaRemove(final View pView, final ViewHolder pHolder) {
+		ViewCompat.setAlpha(pView, 1);
+		dispatchRemoveFinished(pHolder);
+		mRemoveAnimations.remove(pHolder);
+		dispatchFinishedWhenDone();
+	}
+	
+	
 	@Override
 	public boolean animateAdd(final ViewHolder holder) {
 		ViewCompat.setAlpha(holder.itemView, 0);
@@ -400,6 +411,16 @@ public class CarouselItemAnimator extends RecyclerView.ItemAnimator {
 
 	public void setTranslationValueY(float pTranslationValueY) {
 		mTranslationValueY = pTranslationValueY;
+	}
+
+
+	public boolean isUseTranslationAnimation() {
+		return mIsUseTranslationAnimation;
+	}
+
+
+	public void setIsUseTranslationAnimation(boolean mIsUseTranslationAnimation) {
+		this.mIsUseTranslationAnimation = mIsUseTranslationAnimation;
 	}
 
 	private static class VpaListenerAdapter implements ViewPropertyAnimatorListener {

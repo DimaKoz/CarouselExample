@@ -1,5 +1,6 @@
 package com.kozhevin.example.carousel.listeners;
 
+
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.RecyclerView.State;
 import android.util.Log;

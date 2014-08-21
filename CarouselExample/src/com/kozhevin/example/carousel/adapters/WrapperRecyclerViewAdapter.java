@@ -1,5 +1,6 @@
 package com.kozhevin.example.carousel.adapters;
 
+
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.RecyclerView.Adapter;
 import android.support.v7.widget.RecyclerView.AdapterDataObserver;
@@ -10,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.kozhevin.example.carousel.R;
+
 
 public class WrapperRecyclerViewAdapter<T extends ViewHolder> extends RecyclerView.Adapter<ViewHolder> {
 

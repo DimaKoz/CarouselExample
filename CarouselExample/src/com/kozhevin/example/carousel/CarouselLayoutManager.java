@@ -42,9 +42,9 @@ public class CarouselLayoutManager extends RecyclerView.LayoutManager {
 
 	private static final String		TAG								= "LinearLayoutManager";
 
-	private static final boolean	DEBUG							= true;
+	private static final boolean	DEBUG							= false;
 
-	private static final boolean	IS_DEBUG_SCALE					= true;
+	private static final boolean	IS_DEBUG_SCALE					= false;
 
 	public static final int			HORIZONTAL						= LinearLayout.HORIZONTAL;
 
