@@ -14,6 +14,11 @@ public class StateScrollStorage  {
 	
 	private int mScrollPointerId;
 	
+	private boolean mIsTouched;
+	
+
+	private volatile boolean mIsWaitNextTouchEvent;
+	
 	private static class InstanceHolder {
 
 		private static final StateScrollStorage INSTANCE = new StateScrollStorage();
@@ -73,6 +78,22 @@ public class StateScrollStorage  {
 
 	public void setScrollPointerId(int pScrollPointerId) {
 		mScrollPointerId = pScrollPointerId;
+	}
+
+	public boolean isTouched() {
+		return mIsTouched;
+	}
+
+	public void setTouched(boolean pIsTouched) {
+		mIsTouched = pIsTouched;
+	}
+
+	public boolean isWaitNextTouchEvent() {
+		return mIsWaitNextTouchEvent;
+	}
+
+	public void setWaitNextTouchEvent(boolean pIsWaitNextTouchEvent) {
+		mIsWaitNextTouchEvent = pIsWaitNextTouchEvent;
 	}
 
 }

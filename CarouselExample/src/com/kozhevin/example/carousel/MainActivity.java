@@ -6,7 +6,6 @@ import java.util.List;
 import android.app.Activity;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.RecyclerView.State;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -14,7 +13,6 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 
 import com.kozhevin.example.carousel.adapters.CarouselAdapter;
-import com.kozhevin.example.carousel.adapters.WrapperRecyclerViewAdapter;
 import com.kozhevin.example.carousel.listeners.OnLappingItemListener;
 import com.kozhevin.example.carousel.swipedismiss.SwipeDismissRecyclerViewTouchListener;
 
@@ -29,13 +27,14 @@ public class MainActivity extends Activity {
 	private CarouselAdapter									mAdapter;
 	private List<ViewModel>									mListModel;
 	private CarouselRecyclerView							mRecyclerView;
-	private WrapperRecyclerViewAdapter<CarouselViewHolder>	mWrapperRecyclerViewAdapter;
 
 	private OnLappingItemListener							mOnLappingItemListener;
 
-	private CarouselLayoutManager							mLinearLayoutManager;
+//	private CarouselLayoutManager							mLinearLayoutManager;
 
 	private CarouselItemAnimator							mDefaultItemAnimator;
+
+	private CarouselLayoutManager	mLinearLayoutManager;
 
 
 	@Override
@@ -48,12 +47,9 @@ public class MainActivity extends Activity {
 		mListModel = createMockList();
 		mAdapter = new CarouselAdapter(this);
 		mAdapter.setData(mListModel);
-		mWrapperRecyclerViewAdapter = new WrapperRecyclerViewAdapter<CarouselViewHolder>();
-		mWrapperRecyclerViewAdapter.setAdaper(mAdapter);
-		mAdapter.setPositionOffset(-mWrapperRecyclerViewAdapter.getOffsetPositionForAnimations());
-		mRecyclerView.setAdapter(mWrapperRecyclerViewAdapter);
+		mRecyclerView.setAdapter(mAdapter);
 
-		mLinearLayoutManager = new CarouselLayoutManager(LinearLayout.HORIZONTAL, false);
+		mLinearLayoutManager = new CarouselLayoutManager(this, LinearLayout.HORIZONTAL, false);
 		mLinearLayoutManager.supportsPredictiveItemAnimations();
 		mRecyclerView.setLayoutManager(mLinearLayoutManager);
 		mDefaultItemAnimator = new CarouselItemAnimator();
@@ -64,16 +60,25 @@ public class MainActivity extends Activity {
 
 			@Override
 			public void onImageClick(int position) {
-				mAdapter.showRemoveItemAnimation(position);
-				mListModel.remove(position);
+				if (position == 0) {
+					return;
+				}
+				Log.v(LOG_TAG, " onImageClick position removed =" + (position));
+				
+				mListModel.remove(position - mAdapter.getOffsetPositionForAnimations());
+				mAdapter.showRemoveItemAnimation(position - mAdapter.getOffsetPositionForAnimations());
 
 			}
 
 
 			@Override
 			public void onDeleteButtonClick(int position) {
-				mAdapter.showRemoveItemAnimation(position);
-				mListModel.remove(position);
+				if (position == 0) {
+					return;
+				}
+				Log.v(LOG_TAG, " onDeleteButtonClick position removed =" + (position));
+				mListModel.remove(position - mAdapter.getOffsetPositionForAnimations());
+				mAdapter.showRemoveItemAnimation(position - mAdapter.getOffsetPositionForAnimations());
 			}
 		});
 
@@ -91,7 +96,6 @@ public class MainActivity extends Activity {
 				Log.d(getPackageName(), "a new item inserted into " + lcount);
 				mListModel.add(new ViewModel(lcount, "Item " + (lcount + 1), null));
 				mAdapter.notifyDataSetChanged();
-				mWrapperRecyclerViewAdapter.notifyDataSetChanged();
 
 			}
 		});
@@ -99,11 +103,12 @@ public class MainActivity extends Activity {
 		mOnLappingItemListener = new OnLappingItemListener(mRecyclerView, mLinearLayoutManager);
 
 		mLinearLayoutManager.setOnLappingItemListener(mOnLappingItemListener);
-		if (mWrapperRecyclerViewAdapter.getItemCount() > 1) {
+		if (mAdapter.getItemCount() > 1) {
 			mOnLappingItemListener.onItemLapping(1);
 		}
 
-		mLinearLayoutManager.smoothScrollToPosition(mRecyclerView, new State(), 1);
+	
+
 		initSwipe();
 	}
 
@@ -124,8 +129,8 @@ public class MainActivity extends Activity {
 
 					@Override
 					public boolean canDismiss(int position) {
-						if (mWrapperRecyclerViewAdapter != null) {
-							if (position == 0 || ((position + 1) == mWrapperRecyclerViewAdapter.getItemCount())) {
+						if (mAdapter != null) {
+							if (position == 0 || ((position + mAdapter.getOffsetPositionForAnimations()) == mAdapter.getItemCount())) {
 								return false;
 							}
 						}
@@ -138,20 +143,19 @@ public class MainActivity extends Activity {
 					public void onDismiss(RecyclerView pListView, int[] pReverseSortedPositions) {
 						for (int position : pReverseSortedPositions) {
 
-							Log.v(LOG_TAG, "position removed =" + (position - 1));
+							Log.v(LOG_TAG, " onDismiss position removed =" + (position));
 							if (position == 0) {
 								return;
 							}
-							mListModel.remove(position - 1);
+							mListModel.remove(position);
 							mDefaultItemAnimator.setIsUseTranslationAnimation(false);
-							mAdapter.notifyItemRemoved(position - 1);
+							mAdapter.notifyItemRemoved(position);
 
 						}
 					}
 				});
 
 		mRecyclerView.setOnTouchListener(touchListener);
-		mRecyclerView.setOnHoverListener(touchListener);
 		mRecyclerView.addOnItemTouchListener(touchListener);
 
 		// Setting this scroll listener is required to ensure that during

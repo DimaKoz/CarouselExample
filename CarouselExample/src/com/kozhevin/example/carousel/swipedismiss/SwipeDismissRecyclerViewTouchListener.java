@@ -22,9 +22,7 @@ import android.widget.ListView;
 
 import com.kozhevin.example.carousel.StateScrollStorage;
 
-
-public class SwipeDismissRecyclerViewTouchListener implements View.OnTouchListener, View.OnHoverListener,
-		OnItemTouchListener {
+public class SwipeDismissRecyclerViewTouchListener implements View.OnTouchListener, OnItemTouchListener {
 
 	private static final String			LOG_TAG						= "SwipeDismiss";
 
@@ -53,6 +51,7 @@ public class SwipeDismissRecyclerViewTouchListener implements View.OnTouchListen
 
 	private StringBuilder				mStrBuild;
 	private Rect						mRectViewCoord;
+	private boolean						mIsAlreadyDissmissed;
 
 	/**
 	 * The callback interface used by {@link SwipeDismissRecyclerViewTouchListener} to inform its client
@@ -131,7 +130,10 @@ public class SwipeDismissRecyclerViewTouchListener implements View.OnTouchListen
 			@Override
 			public void onScrollStateChanged(int pScrollState) {
 
+				StateScrollStorage.getInstance().setScrollState(pScrollState);
+
 				setEnabled(pScrollState != RecyclerView.SCROLL_STATE_DRAGGING);
+				
 				if (IS_DEBUG) {
 					mStrBuild.delete(0, mStrBuild.length());
 					mStrBuild.append("ScrollState is ");
@@ -160,7 +162,20 @@ public class SwipeDismissRecyclerViewTouchListener implements View.OnTouchListen
 
 
 			@Override
-			public void onScrolled(int arg0, int arg1) {
+			public void onScrolled(int pDx, int pDy) {
+				
+				if (IS_DEBUG) {
+					mStrBuild.delete(0, mStrBuild.length());
+					mStrBuild.append("onScrolled dx=").append(pDx).append(", dy=").append(pDy);
+					Log.d(LOG_TAG, mStrBuild.toString());
+				}
+				/*
+				if (mRecycleView.getLayoutManager() != null
+						&& mRecycleView.getLayoutManager() instanceof CarouselLayoutManager
+						&& !StateScrollStorage.getInstance().isTouched()) {
+					((CarouselLayoutManager)mRecycleView.getLayoutManager()).performSmoothScroll();
+				}
+				*/
 
 			}
 		};
@@ -179,7 +194,7 @@ public class SwipeDismissRecyclerViewTouchListener implements View.OnTouchListen
 
 		switch (motionEvent.getActionMasked()) {
 		case MotionEvent.ACTION_DOWN: {
-
+			mIsAlreadyDissmissed = false;
 			return false;
 
 		}
@@ -215,29 +230,37 @@ public class SwipeDismissRecyclerViewTouchListener implements View.OnTouchListen
 				dismissRight = mVelocityTracker.getYVelocity() > 0;
 			}
 
-			if (dismiss) {
+			if (IS_DEBUG) {
+				Log.v(LOG_TAG, "mIsAlreadyDissmissed == " + (mIsAlreadyDissmissed == true));
+			}
+
+			if (dismiss && !mIsAlreadyDissmissed) {
 				// dismiss
 
 				final View downView = mDownView; // mDownView gets null'd before animation ends
 				final int downPosition = mDownPosition;
 				++mDismissAnimationRefCount;
-				ViewCompat.animate(mDownView).translationY(dismissRight ? mViewHeight : -mViewHeight).alpha(0).setDuration(mAnimationTime).setListener(new ViewPropertyAnimatorListener() {
-					
-					@Override
-					public void onAnimationStart(View arg0) {
-					}
-					
-					
-					@Override
-					public void onAnimationEnd(View arg0) {
-						performDismiss(downView, downPosition);
-					}
-					
-					
-					@Override
-					public void onAnimationCancel(View arg0) {
-					}
-				}).start();
+				ViewCompat.animate(downView).translationY(dismissRight ? mViewHeight : -mViewHeight).alpha(0)
+						.setDuration(mAnimationTime).setListener(new ViewPropertyAnimatorListener() {
+
+							@Override
+							public void onAnimationStart(View arg0) {
+
+							}
+
+
+							@Override
+							public void onAnimationEnd(View arg0) {
+								if (!mIsAlreadyDissmissed) {
+									mIsAlreadyDissmissed = true;
+									performDismiss(downView, downPosition);
+								}
+							}
+
+
+							@Override
+							public void onAnimationCancel(View arg0) {}
+						}).start();
 			}
 			else {
 				// cancel
@@ -258,6 +281,7 @@ public class SwipeDismissRecyclerViewTouchListener implements View.OnTouchListen
 			if (IS_DEBUG) {
 				Log.v(LOG_TAG, "MotionEvent.ACTION_MOVE");
 			}
+			mIsAlreadyDissmissed = false;
 
 			if (mVelocityTracker == null) {
 				if (IS_DEBUG) {
@@ -457,21 +481,6 @@ public class SwipeDismissRecyclerViewTouchListener implements View.OnTouchListen
 
 		mPendingDismisses.add(new PendingDismissData(dismissPosition, dismissView));
 		animator.start();
-	}
-
-
-	@Override
-	public boolean onHover(View v, MotionEvent event) {
-
-		if (IS_DEBUG) {
-			Log.w(LOG_TAG, "onHover started");
-		}
-
-		if (IS_DEBUG) {
-			Log.w(LOG_TAG, "onHover finished ");
-		}
-
-		return false;
 	}
 
 

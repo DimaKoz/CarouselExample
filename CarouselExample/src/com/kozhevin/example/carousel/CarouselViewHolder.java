@@ -1,7 +1,7 @@
 package com.kozhevin.example.carousel;
 
 
-//import android.support.v7.widget.RecyclerView;
+
 import com.kozhevin.example.carousel.adapters.CarouselAdapter;
 
 import android.support.v7.widget.RecyclerView;
@@ -35,6 +35,10 @@ public class CarouselViewHolder extends RecyclerView.ViewHolder {
 			}
 		});
 */
+		
+		if (deleteButton == null) {
+			return;
+		}
 		deleteButton.setOnClickListener(new View.OnClickListener() {
 
 			@Override

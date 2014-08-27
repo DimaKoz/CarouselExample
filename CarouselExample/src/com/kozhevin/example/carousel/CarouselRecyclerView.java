@@ -67,6 +67,7 @@ public class CarouselRecyclerView extends RecyclerView {
 			if (lStateScroll.getScrollState() == SCROLL_STATE_SETTLING) {
 				lStateScroll.setScrollState(SCROLL_STATE_DRAGGING);
 			}
+			StateScrollStorage.getInstance().setTouched(true);
 
 			break;
 
@@ -83,6 +84,8 @@ public class CarouselRecyclerView extends RecyclerView {
 
 			lStateScroll.setScrollPointerId(MotionEventCompat.getPointerId(e, actionIndex));
 
+			StateScrollStorage.getInstance().setTouched(true);
+
 			break;
 
 		case MotionEvent.ACTION_MOVE: {
@@ -97,6 +100,8 @@ public class CarouselRecyclerView extends RecyclerView {
 						lStateScroll.getScrollPointerId() + " not found. Did any MotionEvents get skipped?");
 				return false;
 			}
+			
+			StateScrollStorage.getInstance().setTouched(true);
 
 			final int x = (int)(MotionEventCompat.getX(e, index) + 0.5f);
 			final int y = (int)(MotionEventCompat.getY(e, index) + 0.5f);
@@ -122,6 +127,7 @@ public class CarouselRecyclerView extends RecyclerView {
 			if (IS_DEBUG) {
 				Log.v(TAG, "MotionEvent.ACTION_UP");
 			}
+			StateScrollStorage.getInstance().setTouched(false);
 
 		}
 			break;
@@ -134,4 +140,64 @@ public class CarouselRecyclerView extends RecyclerView {
 		return super.onInterceptTouchEvent(e);
 	}
 
+	@Override
+	public boolean onTouchEvent(MotionEvent e) {
+		
+		if (IS_DEBUG) {
+			Log.i(TAG, "onTouchEvent started");
+		}
+
+		final int action = MotionEventCompat.getActionMasked(e);
+
+		switch (action) {
+		case MotionEvent.ACTION_DOWN:
+			if (IS_DEBUG) {
+				Log.i(TAG, "MotionEvent.ACTION_DOWN");
+			}
+			StateScrollStorage.getInstance().setWaitNextTouchEvent(false);
+			break;
+
+		case MotionEventCompat.ACTION_POINTER_DOWN:
+			if (IS_DEBUG) {
+				Log.i(TAG, "MotionEvent.ACTION_POINTER_DOWN");
+			}
+
+
+			break;
+
+		case MotionEvent.ACTION_MOVE: {
+			if (IS_DEBUG) {
+				Log.i(TAG, "MotionEvent.ACTION_MOVE");
+			}
+
+			StateScrollStorage.getInstance().setWaitNextTouchEvent(false);
+
+		
+			break;
+		}
+		case MotionEvent.ACTION_UP: {
+			if (IS_DEBUG) {
+				Log.v(TAG, "MotionEvent.ACTION_UP");
+			}
+			StateScrollStorage.getInstance().setTouched(false);
+			
+			if (getLayoutManager() != null
+					&& getLayoutManager() instanceof CarouselLayoutManager
+					&& StateScrollStorage.getInstance().getScrollState() != RecyclerView.SCROLL_STATE_DRAGGING ) {
+				((CarouselLayoutManager)getLayoutManager()).performSmoothScroll();
+			}
+
+			break;
+			}
+			
+
+		}
+
+		if (IS_DEBUG) {
+			Log.i(TAG, "onTouchEvent finished");
+		}
+		
+		return super.onTouchEvent(e);
+	}
+	
 }

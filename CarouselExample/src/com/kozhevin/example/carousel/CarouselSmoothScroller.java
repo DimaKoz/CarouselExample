@@ -34,7 +34,7 @@ abstract public class CarouselSmoothScroller extends RecyclerView.SmoothScroller
 
 	private static final String				TAG								= "LinearSmoothScroller";
 
-	private static final boolean			DEBUG							= true;
+	private static final boolean			IS_DEBUG						= true;
 
 	private static final float				MILLISECONDS_PER_INCH			= 75f;
 
@@ -134,7 +134,7 @@ abstract public class CarouselSmoothScroller extends RecyclerView.SmoothScroller
 			stop();
 			return;
 		}
-		if (DEBUG && mTargetVector != null && ((mTargetVector.x * dx < 0 || mTargetVector.y * dy < 0))) {
+		if (IS_DEBUG && mTargetVector != null && ((mTargetVector.x * dx < 0 || mTargetVector.y * dy < 0))) {
 			throw new IllegalStateException("Scroll happened in the opposite direction"
 					+ " of the target. Some calculations are wrong");
 		}
@@ -377,6 +377,11 @@ abstract public class CarouselSmoothScroller extends RecyclerView.SmoothScroller
 
 	public void setDxOffset(int pDxOffset) {
 		mDxOffset = pDxOffset;
+	}
+
+
+	public int getDxOffset() {
+		return mDxOffset;
 	}
 
 }
